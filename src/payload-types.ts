@@ -68,6 +68,11 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    tenants: Tenant;
+    wards: Ward;
+    certifications: Certification;
+    shifts: Shift;
+    timeLogs: TimeLog;
     media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -77,6 +82,11 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    tenants: TenantsSelect<false> | TenantsSelect<true>;
+    wards: WardsSelect<false> | WardsSelect<true>;
+    certifications: CertificationsSelect<false> | CertificationsSelect<true>;
+    shifts: ShiftsSelect<false> | ShiftsSelect<true>;
+    timeLogs: TimeLogsSelect<false> | TimeLogsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -123,6 +133,21 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  name: string;
+  role: 'superadmin' | 'admin' | 'supervisor' | 'worker';
+  tenantId: number | Tenant;
+  maxWeeklyHours?: number | null;
+  certifications?: (number | Certification)[] | null;
+  preferences?: {
+    preferredWards?: (number | Ward)[] | null;
+    unavailableDates?:
+      | {
+          startDate: string;
+          endDate: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -141,6 +166,119 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants".
+ */
+export interface Tenant {
+  id: number;
+  name: string;
+  slug: string;
+  plan: 'basic' | 'compliance' | 'enterprise';
+  TenantSettings?:
+    | {
+        enableOvertimeTracking?: boolean | null;
+        requireGeoFencedLogins?: boolean | null;
+        activateUnionRestRules?: boolean | null;
+        enableShiftBidding?: boolean | null;
+        enableSMSNotifications?: boolean | null;
+        enableAuditReports?: boolean | null;
+        maxWeeklyHours?: number | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'FeatureToggles';
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "certifications".
+ */
+export interface Certification {
+  id: number;
+  name: string;
+  description?: string | null;
+  validityPeriodDays?: number | null;
+  tenantId: number | Tenant;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "wards".
+ */
+export interface Ward {
+  id: number;
+  name: string;
+  floor?: string | null;
+  tenantId: number | Tenant;
+  requiredBaseCertifications?: (number | Certification)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "shifts".
+ */
+export interface Shift {
+  id: number;
+  ward: number | Ward;
+  tenantId: number | Tenant;
+  startTime: string;
+  endTime: string;
+  status: 'draft' | 'published' | 'urgent' | 'filled' | 'closed';
+  assignedStaff?: (number | User)[] | null;
+  staffingRequirements?:
+    | (
+        | {
+            role: 'RN' | 'LPN' | 'CNA' | 'Technician' | 'Supervisor';
+            count: number;
+            mustHaveCerts?: (number | Certification)[] | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'RoleRequirement';
+          }
+        | {
+            certificationId: number | Certification;
+            count: number;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'SpecialistRequirement';
+          }
+        | {
+            minimumSeniorityYears: number;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'SupervisorRequirement';
+          }
+      )[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "timeLogs".
+ */
+export interface TimeLog {
+  id: number;
+  staffId: number | User;
+  tenantId: number | Tenant;
+  shiftId?: (number | null) | Shift;
+  eventType: 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'correction';
+  timestamp: string;
+  ipAddress?: string | null;
+  geolocation?: {
+    lat?: number | null;
+    lng?: number | null;
+  };
+  geofenceStatus?: ('within_bounds' | 'outside_bounds' | 'not_checked') | null;
+  correctionNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -188,6 +326,26 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'tenants';
+        value: number | Tenant;
+      } | null)
+    | ({
+        relationTo: 'wards';
+        value: number | Ward;
+      } | null)
+    | ({
+        relationTo: 'certifications';
+        value: number | Certification;
+      } | null)
+    | ({
+        relationTo: 'shifts';
+        value: number | Shift;
+      } | null)
+    | ({
+        relationTo: 'timeLogs';
+        value: number | TimeLog;
       } | null)
     | ({
         relationTo: 'media';
@@ -240,6 +398,23 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  tenantId?: T;
+  maxWeeklyHours?: T;
+  certifications?: T;
+  preferences?:
+    | T
+    | {
+        preferredWards?: T;
+        unavailableDates?:
+          | T
+          | {
+              startDate?: T;
+              endDate?: T;
+              id?: T;
+            };
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -256,6 +431,122 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants_select".
+ */
+export interface TenantsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  plan?: T;
+  TenantSettings?:
+    | T
+    | {
+        FeatureToggles?:
+          | T
+          | {
+              enableOvertimeTracking?: T;
+              requireGeoFencedLogins?: T;
+              activateUnionRestRules?: T;
+              enableShiftBidding?: T;
+              enableSMSNotifications?: T;
+              enableAuditReports?: T;
+              maxWeeklyHours?: T;
+              id?: T;
+              blockName?: T;
+            };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "wards_select".
+ */
+export interface WardsSelect<T extends boolean = true> {
+  name?: T;
+  floor?: T;
+  tenantId?: T;
+  requiredBaseCertifications?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "certifications_select".
+ */
+export interface CertificationsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  validityPeriodDays?: T;
+  tenantId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "shifts_select".
+ */
+export interface ShiftsSelect<T extends boolean = true> {
+  ward?: T;
+  tenantId?: T;
+  startTime?: T;
+  endTime?: T;
+  status?: T;
+  assignedStaff?: T;
+  staffingRequirements?:
+    | T
+    | {
+        RoleRequirement?:
+          | T
+          | {
+              role?: T;
+              count?: T;
+              mustHaveCerts?: T;
+              id?: T;
+              blockName?: T;
+            };
+        SpecialistRequirement?:
+          | T
+          | {
+              certificationId?: T;
+              count?: T;
+              id?: T;
+              blockName?: T;
+            };
+        SupervisorRequirement?:
+          | T
+          | {
+              minimumSeniorityYears?: T;
+              id?: T;
+              blockName?: T;
+            };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "timeLogs_select".
+ */
+export interface TimeLogsSelect<T extends boolean = true> {
+  staffId?: T;
+  tenantId?: T;
+  shiftId?: T;
+  eventType?: T;
+  timestamp?: T;
+  ipAddress?: T;
+  geolocation?:
+    | T
+    | {
+        lat?: T;
+        lng?: T;
+      };
+  geofenceStatus?: T;
+  correctionNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

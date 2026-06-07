@@ -96,10 +96,10 @@ export const Shifts: CollectionConfig = {
           ],
         },
         {
-          slug: 'SpecialistRequirement',
+          slug: 'SpecialistReq',
           fields: [
             {
-              name: 'certificationId',
+              name: 'cert',
               type: 'relationship',
               relationTo: 'certifications',
               required: true,

@@ -30,6 +30,17 @@ export const tenantUsers: Access = ({ req: { user } }) => {
   }
 }
 
+export const tenantReadAccess: Access = ({ req: { user } }) => {
+  if (!user) return false
+  if (user.role === 'superadmin') return true
+  
+  return {
+    id: {
+      equals: typeof user.tenantId === 'object' ? user.tenantId?.id : user.tenantId,
+    },
+  }
+}
+
 export const isSelfOrTenantAdmin: Access = ({ req: { user } }) => {
   if (!user) return false
   if (user.role === 'superadmin') return true

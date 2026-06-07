@@ -16,7 +16,7 @@ describe('Collections Integration Tests', () => {
     const { tenant, admin, worker, shift } = await seedDatabase(payload)
     
     expect(tenant).toBeDefined()
-    expect(tenant.name).toBe('St. Marys Hospital')
+    expect(tenant.name).toContain('St. Marys Hospital')
     
     expect(admin).toBeDefined()
     expect(admin.role).toBe('admin')

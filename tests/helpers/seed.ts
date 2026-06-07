@@ -3,12 +3,14 @@ import type { Payload } from 'payload'
 export const seedDatabase = async (payload: Payload) => {
   payload.logger.info('Seeding database with initial ShiftMatrix data...')
 
+  const timestamp = Date.now()
+
   // 1. Create a Tenant
   const tenant = await payload.create({
     collection: 'tenants',
     data: {
-      name: 'St. Marys Hospital',
-      slug: 'st-marys',
+      name: `St. Marys Hospital ${timestamp}`,
+      slug: `st-marys-${timestamp}`,
       plan: 'enterprise',
       TenantSettings: [
         {
@@ -27,7 +29,7 @@ export const seedDatabase = async (payload: Payload) => {
   const admin = await payload.create({
     collection: 'users',
     data: {
-      email: 'admin@stmarys.com',
+      email: `admin-${timestamp}@stmarys.com`,
       password: 'password123',
       name: 'Admin User',
       role: 'admin',
@@ -61,7 +63,7 @@ export const seedDatabase = async (payload: Payload) => {
   const worker = await payload.create({
     collection: 'users',
     data: {
-      email: 'jdoe@stmarys.com',
+      email: `worker-${timestamp}@stmarys.com`,
       password: 'password123',
       name: 'John Doe',
       role: 'worker',

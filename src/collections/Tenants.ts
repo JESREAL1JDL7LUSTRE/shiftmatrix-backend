@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { tenantAdmins, tenantUsers, isSuperAdmin } from '../access/tenant'
+import { tenantAdmins, tenantReadAccess, isSuperAdmin } from '../access/tenant'
 
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
@@ -7,7 +7,7 @@ export const Tenants: CollectionConfig = {
     useAsTitle: 'name',
   },
   access: {
-    read: tenantUsers,
+    read: tenantReadAccess,
     update: tenantAdmins,
     create: isSuperAdmin, // Only superadmins can create new tenants
     delete: isSuperAdmin,

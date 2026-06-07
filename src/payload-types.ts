@@ -242,11 +242,11 @@ export interface Shift {
             blockType: 'RoleRequirement';
           }
         | {
-            certificationId: number | Certification;
+            cert: number | Certification;
             count: number;
             id?: string | null;
             blockName?: string | null;
-            blockType: 'SpecialistRequirement';
+            blockType: 'SpecialistReq';
           }
         | {
             minimumSeniorityYears: number;
@@ -507,10 +507,10 @@ export interface ShiftsSelect<T extends boolean = true> {
               id?: T;
               blockName?: T;
             };
-        SpecialistRequirement?:
+        SpecialistReq?:
           | T
           | {
-              certificationId?: T;
+              cert?: T;
               count?: T;
               id?: T;
               blockName?: T;

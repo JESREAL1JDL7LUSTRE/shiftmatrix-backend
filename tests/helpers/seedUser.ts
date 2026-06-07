@@ -25,7 +25,10 @@ export async function seedTestUser(): Promise<void> {
   // Create fresh test user
   await payload.create({
     collection: 'users',
-    data: testUser,
+    data: {
+      email: testUser.email,
+      password: testUser.password,
+    } as any
   })
 }
 

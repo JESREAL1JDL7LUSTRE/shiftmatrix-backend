@@ -1,16 +1,16 @@
-import { PayloadHandler } from 'payload'
+import { PayloadHandler, Endpoint } from 'payload'
 import Redis from 'ioredis'
 import { randomUUID } from 'crypto'
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379/0')
 
-export const autoFillEndpoint: Omit<any, 'handler'> & { handler: PayloadHandler } = {
+export const autoFillEndpoint: Endpoint = {
   path: '/auto-fill',
   method: 'post',
   handler: async (req) => {
     let body
     try {
-      body = await req.json()
+      body = await req.json?.()
     } catch {
       body = req.body || {}
     }
@@ -45,15 +45,27 @@ export const autoFillEndpoint: Omit<any, 'handler'> & { handler: PayloadHandler 
         tenantId: { equals: tId },
         role: { equals: 'worker' }
       },
-      depth: 1,
       limit: 1000
+    })
+
+    const unavailRes = await req.payload.find({
+      collection: 'unavailabilities',
+      where: {
+        tenantId: { equals: tId },
+        status: { equals: 'approved' },
+        and: [
+          { endTime: { greater_than: startDate } },
+          { startTime: { less_than: endDate } }
+        ]
+      },
+      limit: 5000
     })
 
     const tenantRes = await req.payload.findByID({
       collection: 'tenants',
-      id: tId as string
+      id: tId as any
     })
-    const tenantSettings = tenantRes.TenantSettings?.[0] || {}
+    const tenantSettings = (tenantRes as any).TenantSettings?.[0] || {}
 
     const scheduledRes = await req.payload.find({
       collection: 'shifts',
@@ -83,12 +95,22 @@ export const autoFillEndpoint: Omit<any, 'handler'> & { handler: PayloadHandler 
     })
 
     // Format Data for OR-Tools Python Worker
-    const workersPayload = workersRes.docs.map((w: any) => ({
-      id: w.id,
-      maxWeeklyHours: w.maxWeeklyHours || tenantSettings.maxWeeklyHours || 40,
-      currentHours: workerCurrentHours[w.id] || 0,
-      certifications: (w.certifications || []).map((c: any) => typeof c === 'object' ? c.id : c)
-    }))
+    const workersPayload = workersRes.docs.map((w: any) => {
+      const blocks = unavailRes.docs
+        .filter((u: any) => (typeof u.workerId === 'object' ? u.workerId.id : u.workerId) === w.id)
+        .map((u: any) => ({
+          startTime: u.startTime,
+          endTime: u.endTime
+        }))
+
+      return {
+        id: w.id,
+        maxWeeklyHours: w.maxWeeklyHours || tenantSettings.maxWeeklyHours || 40,
+        currentHours: workerCurrentHours[w.id] || 0,
+        certifications: (w.certifications || []).map((c: any) => typeof c === 'object' ? c.id : c),
+        unavailabilityBlocks: blocks
+      }
+    })
 
     const slotsPayload: any[] = []
     for (const shift of shiftsRes.docs) {

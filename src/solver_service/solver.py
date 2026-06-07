@@ -2,7 +2,7 @@ import json
 from ortools.sat.python import cp_model
 from datetime import datetime, timedelta
 
-def solve_schedule(job_data: dict):
+def solve_schedule(job_data: dict) -> dict:
     model = cp_model.CpModel()
     
     workers = job_data.get('workers', [])
@@ -15,8 +15,24 @@ def solve_schedule(job_data: dict):
     # x[w, s] is True if worker w is assigned to slot s
     x = {}
     for w in range(num_workers):
+        # Pre-calculate unavailability check
+        w_unavail = workers[w].get('unavailabilityBlocks', [])
+        parsed_unavail = []
+        for u in w_unavail:
+            parsed_unavail.append((
+                datetime.fromisoformat(u['startTime'].replace('Z', '+00:00')),
+                datetime.fromisoformat(u['endTime'].replace('Z', '+00:00'))
+            ))
+
         for s in range(num_slots):
             x[(w, s)] = model.NewBoolVar(f'w{w}_s{s}')
+            
+            # Constraint: Unavailability
+            s_start = datetime.fromisoformat(slots[s].get('startTime', '').replace('Z', '+00:00'))
+            s_end = datetime.fromisoformat(slots[s].get('endTime', '').replace('Z', '+00:00'))
+            for u_start, u_end in parsed_unavail:
+                if s_start < u_end and s_end > u_start:
+                    model.Add(x[(w, s)] == 0)
             
     # Constraint 1: Each slot must have exactly 1 worker
     for s in range(num_slots):

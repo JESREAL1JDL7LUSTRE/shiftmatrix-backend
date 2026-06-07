@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 import { tenantAdmins } from '../access/tenant'
 
 export const TimeLogs: CollectionConfig = {
@@ -12,13 +12,13 @@ export const TimeLogs: CollectionConfig = {
           tenantId: {
             equals: typeof user.tenantId === 'object' ? user.tenantId?.id : user.tenantId,
           },
-        }
+        } as Where
       }
       return {
         staffId: {
           equals: user.id,
         },
-      }
+      } as Where
     },
     // Creation shouldn't happen through standard REST by workers, it will use custom endpoint
     update: tenantAdmins,
@@ -93,6 +93,14 @@ export const TimeLogs: CollectionConfig = {
       type: 'textarea',
       admin: {
         condition: (data) => data?.eventType === 'correction',
+      },
+    },
+    {
+      name: 'isLate',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Automatically flagged if Clock In timestamp > Shift Start Time.',
       },
     },
   ],

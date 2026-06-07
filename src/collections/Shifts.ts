@@ -1,7 +1,5 @@
 import type { CollectionConfig } from 'payload'
 import { tenantUsers, tenantAdmins } from '../access/tenant'
-import { autoFillEndpoint } from '../endpoints/autoFillEndpoint'
-import { solverWebhookEndpoint } from '../endpoints/solverWebhook'
 
 export const Shifts: CollectionConfig = {
   slug: 'shifts',
@@ -16,10 +14,6 @@ export const Shifts: CollectionConfig = {
     create: tenantAdmins,
     delete: tenantAdmins,
   },
-  endpoints: [
-    autoFillEndpoint,
-    solverWebhookEndpoint,
-  ],
   fields: [
     {
       name: 'ward',

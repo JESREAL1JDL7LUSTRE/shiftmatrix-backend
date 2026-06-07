@@ -34,5 +34,19 @@ export const Wards: CollectionConfig = {
       relationTo: 'certifications',
       hasMany: true,
     },
+    {
+      name: 'geolocation',
+      type: 'group',
+      fields: [
+        { name: 'latitude', type: 'number' },
+        { name: 'longitude', type: 'number' },
+        { 
+          name: 'radiusMeters', 
+          type: 'number', 
+          defaultValue: 100,
+          admin: { description: 'Radius in meters where a clock-in is considered valid.' }
+        },
+      ],
+    },
   ],
 }

@@ -1,11 +1,11 @@
-import { PayloadHandler } from 'payload'
+import { PayloadHandler, Endpoint } from 'payload'
 import crypto from 'crypto'
 
-export const solverWebhookEndpoint: Omit<any, 'handler'> & { handler: PayloadHandler } = {
+export const solverWebhookEndpoint: Endpoint = {
   path: '/solver-webhook',
   method: 'post',
   handler: async (req) => {
-    const rawBody = await req.text()
+    const rawBody = await req.text?.() || ''
     
     // HMAC Verification
     const signature = req.headers.get('x-webhook-signature')

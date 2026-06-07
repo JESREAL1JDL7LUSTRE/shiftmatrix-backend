@@ -74,6 +74,8 @@ export interface Config {
     shifts: Shift;
     timeLogs: TimeLog;
     schedulingRuns: SchedulingRun;
+    unavailabilities: Unavailability;
+    notifications: Notification;
     media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -89,6 +91,8 @@ export interface Config {
     shifts: ShiftsSelect<false> | ShiftsSelect<true>;
     timeLogs: TimeLogsSelect<false> | TimeLogsSelect<true>;
     schedulingRuns: SchedulingRunsSelect<false> | SchedulingRunsSelect<true>;
+    unavailabilities: UnavailabilitiesSelect<false> | UnavailabilitiesSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -218,6 +222,14 @@ export interface Ward {
   floor?: string | null;
   tenantId: number | Tenant;
   requiredBaseCertifications?: (number | Certification)[] | null;
+  geolocation?: {
+    latitude?: number | null;
+    longitude?: number | null;
+    /**
+     * Radius in meters where a clock-in is considered valid.
+     */
+    radiusMeters?: number | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -279,6 +291,10 @@ export interface TimeLog {
   };
   geofenceStatus?: ('within_bounds' | 'outside_bounds' | 'not_checked') | null;
   correctionNote?: string | null;
+  /**
+   * Automatically flagged if Clock In timestamp > Shift Start Time.
+   */
+  isLate?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -296,6 +312,35 @@ export interface SchedulingRun {
    * The shifts that were attempted to be filled during this run.
    */
   shiftsInvolved?: (number | Shift)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "unavailabilities".
+ */
+export interface Unavailability {
+  id: number;
+  workerId: number | User;
+  tenantId: number | Tenant;
+  startTime: string;
+  endTime: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  message: string;
+  type: 'info' | 'urgent' | 'shift_alert';
+  recipientId: number | User;
+  tenantId: number | Tenant;
+  read?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -369,6 +414,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'schedulingRuns';
         value: number | SchedulingRun;
+      } | null)
+    | ({
+        relationTo: 'unavailabilities';
+        value: number | Unavailability;
+      } | null)
+    | ({
+        relationTo: 'notifications';
+        value: number | Notification;
       } | null)
     | ({
         relationTo: 'media';
@@ -492,6 +545,13 @@ export interface WardsSelect<T extends boolean = true> {
   floor?: T;
   tenantId?: T;
   requiredBaseCertifications?: T;
+  geolocation?:
+    | T
+    | {
+        latitude?: T;
+        longitude?: T;
+        radiusMeters?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -568,6 +628,7 @@ export interface TimeLogsSelect<T extends boolean = true> {
       };
   geofenceStatus?: T;
   correctionNote?: T;
+  isLate?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -581,6 +642,33 @@ export interface SchedulingRunsSelect<T extends boolean = true> {
   status?: T;
   errorReason?: T;
   shiftsInvolved?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "unavailabilities_select".
+ */
+export interface UnavailabilitiesSelect<T extends boolean = true> {
+  workerId?: T;
+  tenantId?: T;
+  startTime?: T;
+  endTime?: T;
+  reason?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  message?: T;
+  type?: T;
+  recipientId?: T;
+  tenantId?: T;
+  read?: T;
   updatedAt?: T;
   createdAt?: T;
 }

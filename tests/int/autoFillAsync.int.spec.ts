@@ -89,8 +89,7 @@ describe('Async Auto-Fill Endpoints', () => {
       payload
     }
 
-    const ShiftsConfig = payload.config.collections.find((c: any) => c.slug === 'shifts')
-    const autoFillEndpoint = ShiftsConfig.endpoints.find((e: any) => e.path === '/auto-fill')
+    const autoFillEndpoint = payload.config.endpoints.find((e: any) => e.path === '/auto-fill')
     
     const response = await autoFillEndpoint.handler(reqMock)
     const data = await response.json()
@@ -137,8 +136,7 @@ describe('Async Auto-Fill Endpoints', () => {
       payload
     }
 
-    const ShiftsConfig = payload.config.collections.find((c: any) => c.slug === 'shifts')
-    const webhookEndpoint = ShiftsConfig.endpoints.find((e: any) => e.path === '/solver-webhook')
+    const webhookEndpoint = payload.config.endpoints.find((e: any) => e.path === '/solver-webhook')
 
     const response = await webhookEndpoint.handler(reqMock)
     expect(response.status).toBe(200)

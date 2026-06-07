@@ -13,6 +13,12 @@ import { Certifications } from './collections/Certifications'
 import { Shifts } from './collections/Shifts'
 import { TimeLogs } from './collections/TimeLogs'
 import { SchedulingRuns } from './collections/SchedulingRuns'
+import { Unavailabilities } from './collections/Unavailabilities'
+import { Notifications } from './collections/Notifications'
+import { autoFillEndpoint } from './endpoints/autoFillEndpoint'
+import { solverWebhookEndpoint } from './endpoints/solverWebhook'
+import { notificationsStreamEndpoint } from './endpoints/notificationsStream'
+import { clockInEndpoint } from './endpoints/clockInEndpoint'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -32,7 +38,15 @@ export default buildConfig({
     Shifts,
     TimeLogs,
     SchedulingRuns,
+    Unavailabilities,
+    Notifications,
     Media,
+  ],
+  endpoints: [
+    autoFillEndpoint,
+    solverWebhookEndpoint,
+    notificationsStreamEndpoint,
+    clockInEndpoint
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'fallback-secret-key-1234',

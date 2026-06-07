@@ -2,7 +2,7 @@ import { evaluateEligibility } from './rulesEngine'
 import { User, Shift } from '../payload-types'
 
 type ShiftReqSlot = {
-  shiftId: string
+  shiftId: string | number
   shift: Shift
   blockIndex: number
   block: any
@@ -145,7 +145,7 @@ export function buildAndRunMaxFlow(
 
   const totalFlow = graph.edmondsKarp(S, T)
 
-  const assignments: { workerId: string, shiftId: string, blockIndex: number }[] = []
+  const assignments: { workerId: string | number, shiftId: string | number, blockIndex: number }[] = []
   
   for (let i = 0; i < numWorkers; i++) {
     for (let j = 0; j < numSlots; j++) {

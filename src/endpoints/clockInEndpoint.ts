@@ -1,23 +1,17 @@
-import { PayloadHandler, Endpoint } from 'payload'
-
-// Haversine distance formula to calculate distance between two coordinates in meters
-function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3 // Radius of the earth in m
-  const dLat = (lat2 - lat1) * (Math.PI / 180)
-  const dLon = (lon2 - lon1) * (Math.PI / 180)
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
-}
+/**
+ * clockInEndpoint — Thin Controller
+ *
+ * Validates input and user auth, then delegates geo-fencing and late-check
+ * math to AttendanceService. No business logic lives here.
+ */
+import type { Endpoint } from 'payload'
+import { evaluateGeofence, isClockInLate } from '../services/AttendanceService'
 
 export const clockInEndpoint: Endpoint = {
   path: '/time-logs/clock-in',
   method: 'post',
   handler: async (req) => {
-    let body
+    let body: any
     try {
       body = await req.json?.()
     } catch {
@@ -27,7 +21,10 @@ export const clockInEndpoint: Endpoint = {
     const { shiftId, lat, lng, eventType } = body
 
     if (!shiftId || lat === undefined || lng === undefined || !eventType) {
-      return Response.json({ error: 'shiftId, lat, lng, and eventType required' }, { status: 400 })
+      return Response.json(
+        { error: 'shiftId, lat, lng, and eventType required' },
+        { status: 400 }
+      )
     }
 
     if (!req.user || req.user.role !== 'worker') {
@@ -35,13 +32,16 @@ export const clockInEndpoint: Endpoint = {
     }
 
     const workerId = req.user.id
-    const tenantId = typeof req.user.tenantId === 'object' ? req.user.tenantId?.id : req.user.tenantId
+    const tenantId =
+      typeof req.user.tenantId === 'object'
+        ? (req.user.tenantId as any)?.id
+        : req.user.tenantId
 
-    // 1. Fetch the Shift and associated Ward
+    // Fetch shift + associated ward
     const shiftRes = await req.payload.findByID({
       collection: 'shifts',
       id: shiftId,
-      depth: 1 // Fetch ward details
+      depth: 1,
     })
 
     if (!shiftRes) {
@@ -49,26 +49,15 @@ export const clockInEndpoint: Endpoint = {
     }
 
     const ward = shiftRes.ward as any
-    const shiftStartTime = new Date(shiftRes.startTime).getTime()
     const now = new Date()
-    const nowMs = now.getTime()
 
-    // 2. Geofence Check
-    let geofenceStatus: 'within_bounds' | 'outside_bounds' | 'not_checked' = 'not_checked'
-    if (ward?.geolocation?.latitude && ward?.geolocation?.longitude) {
-      const radius = ward.geolocation.radiusMeters || 100
-      const distance = getDistanceFromLatLonInM(lat, lng, ward.geolocation.latitude, ward.geolocation.longitude)
-      geofenceStatus = distance <= radius ? 'within_bounds' : 'outside_bounds'
-    }
+    // Delegate math to AttendanceService (pure functions)
+    const geofenceStatus = evaluateGeofence(lat, lng, ward)
+    const isLate =
+      eventType === 'clock_in'
+        ? isClockInLate(now.getTime(), new Date(shiftRes.startTime).getTime())
+        : false
 
-    // 3. Late Check
-    // If they are clocking in, and current time is > 5 minutes past shift start time
-    let isLate = false
-    if (eventType === 'clock_in' && nowMs > (shiftStartTime + 5 * 60000)) {
-      isLate = true
-    }
-
-    // 4. Create TimeLog
     const newLog = await req.payload.create({
       collection: 'timeLogs',
       data: {
@@ -79,15 +68,13 @@ export const clockInEndpoint: Endpoint = {
         timestamp: now.toISOString(),
         geolocation: { lat, lng },
         geofenceStatus,
-        isLate
-      }
+        isLate,
+      },
     })
 
-    return Response.json({
-      message: 'Time log recorded successfully',
-      geofenceStatus,
-      isLate,
-      logId: newLog.id
-    }, { status: 201 })
-  }
+    return Response.json(
+      { message: 'Time log recorded successfully', geofenceStatus, isLate, logId: newLog.id },
+      { status: 201 }
+    )
+  },
 }

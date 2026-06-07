@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { getPayload } from 'payload'
 import config from '../../src/payload.config'
-import { notificationEmitter } from '../../src/collections/Notifications'
+import { notificationBus } from '../../src/infrastructure/NotificationBus'
 
 
 describe('Omni-Channel Communications (Notifications)', () => {
@@ -31,8 +31,8 @@ describe('Omni-Channel Communications (Notifications)', () => {
   })
 
   it('should broadcast an event to the SSE Emitter when a new notification is created', async () => {
-    // Spy on the global event emitter
-    const emitSpy = vi.spyOn(notificationEmitter, 'emit')
+    // Spy on the infrastructure-level notification bus (correct import path)
+    const emitSpy = vi.spyOn(notificationBus, 'emit')
 
     // Create a notification via Payload CMS
     await payload.create({

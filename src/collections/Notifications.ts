@@ -1,9 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { tenantUsers, tenantAdmins } from '../access/tenant'
-import { EventEmitter } from 'events'
-
-// Global Event Emitter for SSE
-export const notificationEmitter = new EventEmitter()
+import { dispatchNotification } from '../services/NotificationService'
 
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
@@ -18,20 +15,14 @@ export const Notifications: CollectionConfig = {
   },
   hooks: {
     afterChange: [
-      ({ doc, operation }) => {
+      async ({ doc, operation }) => {
         if (operation === 'create') {
-          // Broadcast to SSE Stream
-          notificationEmitter.emit('new_notification', doc)
-          
-          // Simulated SMS/Email logic
-          if (doc.type === 'urgent' || doc.type === 'shift_alert') {
-            console.log(`[SIMULATED SMS/EMAIL] To: ${doc.recipientId} | Message: ${doc.message}`)
-            // TODO: Implement actual Twilio/Resend integration here when API keys are available
-          }
+          // Delegate to NotificationService (infrastructure + future SMS/email)
+          await dispatchNotification(doc)
         }
         return doc
-      }
-    ]
+      },
+    ],
   },
   fields: [
     {

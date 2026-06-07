@@ -1,25 +1,11 @@
-import type { CollectionConfig, Where } from 'payload'
-import { tenantAdmins } from '../access/tenant'
+import type { CollectionConfig } from 'payload'
+import { tenantAdmins, workerOwnsViaField } from '../access/tenant'
 
 export const TimeLogs: CollectionConfig = {
   slug: 'timeLogs',
   access: {
-    // Restrict read to admins. Workers should only see their own (can add custom logic).
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin' || user.role === 'superadmin') {
-        return {
-          tenantId: {
-            equals: typeof user.tenantId === 'object' ? user.tenantId?.id : user.tenantId,
-          },
-        } as Where
-      }
-      return {
-        staffId: {
-          equals: user.id,
-        },
-      } as Where
-    },
+    // Admins see all logs in their tenant. Workers see only their own.
+    read: workerOwnsViaField('staffId'),
     // Creation shouldn't happen through standard REST by workers, it will use custom endpoint
     update: tenantAdmins,
     create: tenantAdmins,

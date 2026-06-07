@@ -75,17 +75,16 @@ export const Users: CollectionConfig = {
         {
           name: 'unavailableDates',
           type: 'array',
+          // ⚠️  DEPRECATED — This field is NOT read by the CP-SAT solver.
+          // Submit time-off requests through the Unavailabilities collection instead.
+          // This field will be removed in the next schema migration sprint.
+          admin: {
+            description:
+              '⚠️ DEPRECATED: This field is ignored by the scheduling solver. Use the Unavailabilities collection to submit time-off requests.',
+          },
           fields: [
-            {
-              name: 'startDate',
-              type: 'date',
-              required: true,
-            },
-            {
-              name: 'endDate',
-              type: 'date',
-              required: true,
-            },
+            { name: 'startDate', type: 'date', required: true },
+            { name: 'endDate', type: 'date', required: true },
           ],
         },
       ],

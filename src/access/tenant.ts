@@ -1,5 +1,10 @@
 import type { Access, Where } from 'payload'
 
+/** Resolves tenantId regardless of whether it is a populated object or raw string */
+export function resolveTenantId(user: NonNullable<any>): string {
+  return typeof user.tenantId === 'object' ? user.tenantId?.id : user.tenantId
+}
+
 export const isSuperAdmin: Access = ({ req: { user } }) => {
   if (!user) return false
   return user.role === 'superadmin'
@@ -65,3 +70,19 @@ export const anyUser: Access = ({ req: { user } }) => {
   if (!user) return false
   return true
 }
+
+/**
+ * Factory: "Admin/superadmin sees full tenant, worker sees only their own records."
+ * Use fieldName to specify which field links the record to the user (e.g. 'staffId', 'workerId').
+ *
+ * Replaces the duplicated inline access functions in TimeLogs.ts and Unavailabilities.ts.
+ */
+export const workerOwnsViaField = (fieldName: string): Access =>
+  ({ req: { user } }) => {
+    if (!user) return false
+    if (user.role === 'superadmin') return true
+    if (user.role === 'admin') {
+      return { tenantId: { equals: resolveTenantId(user) } } as Where
+    }
+    return { [fieldName]: { equals: user.id } } as Where
+  }

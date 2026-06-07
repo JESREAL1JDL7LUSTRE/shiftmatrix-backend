@@ -146,6 +146,9 @@ export interface User {
   certifications?: (number | Certification)[] | null;
   preferences?: {
     preferredWards?: (number | Ward)[] | null;
+    /**
+     * ⚠️ DEPRECATED: This field is ignored by the scheduling solver. Use the Unavailabilities collection to submit time-off requests.
+     */
     unavailableDates?:
       | {
           startDate: string;

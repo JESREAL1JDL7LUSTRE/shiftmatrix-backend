@@ -1,5 +1,5 @@
-import type { CollectionConfig, Where } from 'payload'
-import { tenantUsers, tenantAdmins } from '../access/tenant'
+import type { CollectionConfig } from 'payload'
+import { tenantUsers, tenantAdmins, workerOwnsViaField } from '../access/tenant'
 
 export const Unavailabilities: CollectionConfig = {
   slug: 'unavailabilities',
@@ -7,22 +7,8 @@ export const Unavailabilities: CollectionConfig = {
     useAsTitle: 'reason',
   },
   access: {
-    // Workers can see their own, admins see all in tenant
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin' || user.role === 'superadmin') {
-        return {
-          tenantId: {
-            equals: typeof user.tenantId === 'object' ? user.tenantId?.id : user.tenantId,
-          },
-        } as Where
-      }
-      return {
-        workerId: {
-          equals: user.id,
-        },
-      } as Where
-    },
+    // Admins see all in tenant. Workers see only their own requests.
+    read: workerOwnsViaField('workerId'),
     update: tenantAdmins,
     create: tenantUsers, // Workers can request time off
     delete: tenantAdmins,

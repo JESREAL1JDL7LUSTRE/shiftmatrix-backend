@@ -5,7 +5,7 @@ import redis
 import requests
 import hmac
 import hashlib
-from backend.src.solver_service.solver import solve_schedule
+from solver import solve_schedule  # PYTHONPATH=/app set in Dockerfile
 
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL', 'http://localhost:3000/api/shifts/solver-webhook')

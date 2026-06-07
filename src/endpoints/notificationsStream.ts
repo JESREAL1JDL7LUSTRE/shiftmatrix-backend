@@ -1,57 +1,63 @@
-import { PayloadHandler, Endpoint } from 'payload'
-import { notificationEmitter } from '../collections/Notifications'
+/**
+ * notificationsStream — Thin Controller
+ *
+ * Sets up the SSE stream for authenticated users.
+ * Imports notificationBus from the infrastructure layer (not from Notifications.ts).
+ */
+import type { Endpoint } from 'payload'
+import { notificationBus } from '../infrastructure/NotificationBus'
 
 export const notificationsStreamEndpoint: Endpoint = {
   path: '/notifications/stream',
   method: 'get',
   handler: async (req) => {
-    // Only allow authenticated users to listen to their own notifications
     if (!req.user) {
       return new Response('Unauthorized', { status: 401 })
     }
 
     const userId = req.user.id
-    
-    // Set up SSE headers
+
     const headers = new Headers({
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      // Allow CORS for the SvelteKit frontend (adjust as needed for production)
       'Access-Control-Allow-Origin': '*',
     })
 
     const stream = new ReadableStream({
       start(controller) {
-        // Send initial connection heartbeat
-        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`))
+        // Initial heartbeat
+        controller.enqueue(
+          new TextEncoder().encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`)
+        )
 
-        // Listener for new notifications
         const listener = (notification: any) => {
-          const recipientId = typeof notification.recipientId === 'object' ? notification.recipientId.id : notification.recipientId
-          // Only send if the notification is for the connected user
+          const recipientId =
+            typeof notification.recipientId === 'object'
+              ? notification.recipientId.id
+              : notification.recipientId
           if (recipientId === userId) {
-            const data = JSON.stringify(notification)
-            controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`))
+            controller.enqueue(
+              new TextEncoder().encode(`data: ${JSON.stringify(notification)}\n\n`)
+            )
           }
         }
 
-        notificationEmitter.on('new_notification', listener)
+        notificationBus.on('new_notification', listener)
 
-        // Heartbeat every 15 seconds to keep connection alive
+        // Keep-alive ping every 15 seconds
         const interval = setInterval(() => {
           controller.enqueue(new TextEncoder().encode(': heartbeat\n\n'))
-        }, 15000)
+        }, 15_000)
 
-        // Cleanup on disconnect
         req.signal?.addEventListener('abort', () => {
-          notificationEmitter.off('new_notification', listener)
+          notificationBus.off('new_notification', listener)
           clearInterval(interval)
           controller.close()
         })
-      }
+      },
     })
 
     return new Response(stream, { headers })
-  }
+  },
 }

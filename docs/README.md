@@ -10,7 +10,9 @@ Welcome to the ShiftMatrix Backend Documentation. This directory contains detail
    - Detailed breakdown of all collections (Tenants, Users, Shifts, etc.) and deeply nested constraints.
 3. [Access Control & RLS](./access_control.md)
    - Explanation of our Application-Level Row-Level Security (RLS) and multi-tenancy isolation.
-4. [Testing & Migrations](./testing.md)
+4. [Algorithmic Scheduling](./algorithmic_scheduling.md)
+   - How the asynchronous Google OR-Tools Constraint Programming microservice handles auto-fill requests.
+5. [Testing & Migrations](./testing.md)
    - Guide on how the Vitest integration suite works, dynamic seeding, and Drizzle database push behaviors.
 
 ### Getting Started for Developers

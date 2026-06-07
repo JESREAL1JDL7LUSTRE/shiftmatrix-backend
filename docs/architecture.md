@@ -8,6 +8,8 @@ ShiftMatrix uses a modern, serverless-ready stack centered around headless conte
 - **CMS / Backend**: [Payload CMS 3.x](https://payloadcms.com/)
 - **Database**: [NeonDB (Serverless PostgreSQL)](https://neon.tech/)
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/) (Wrapped by Payload's Postgres Adapter)
+- **Message Broker**: [Redis](https://redis.io/) (via Docker)
+- **Solver Microservice**: Python 3.11 with [Google OR-Tools](https://developers.google.com/optimization)
 - **Testing**: [Vitest](https://vitest.dev/)
 
 ## Core Concepts
@@ -24,3 +26,6 @@ ShiftMatrix is a multi-tenant B2B application. A single deployment serves multip
 
 ### 3. Deeply Nested Constraints via Payload Blocks
 Shift constraints (e.g., requiring 2 RNs with ICU certifications) are not stored in separate normalized relational tables. Instead, they leverage Payload's **Blocks** feature within the `Shifts` collection. This stores the constraints as structured JSONB arrays under the hood, allowing for extremely flexible constraint definitions without complex SQL JOINs.
+
+### 4. Asynchronous Microservice Architecture (Scheduling Engine)
+Because ShiftMatrix solves complex Constraint Satisfaction Problems (CSPs), the Node.js backend does not compute schedules synchronously. Instead, Payload pushes an unoptimized JSON schedule into a **Redis Queue**. A standalone **Python OR-Tools Worker** polls this queue, solves the mathematical constraints (e.g., Union Overtime rules), and POSTs the optimized schedule back to Payload via a webhook.

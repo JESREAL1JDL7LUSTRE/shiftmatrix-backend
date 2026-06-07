@@ -35,3 +35,8 @@ The core scheduling entity.
 An append-only ledger tracking clock-ins, clock-outs, and breaks.
 - **Fields**: `eventType` (clock_in, clock_out, break_start, break_end), `timestamp`, `staffId`, `shiftId`, `tenantId`.
 - **Note**: Modifying TimeLogs directly is restricted. It acts as an immutable audit trail.
+
+### 7. SchedulingRuns (`src/collections/SchedulingRuns.ts`)
+Implements the **Job Tracking Pattern** to decouple scheduling logic from physical shifts.
+- **Fields**: `jobId` (unique UUID), `status` (pending, completed, failed), `errorReason`, `shiftsInvolved` (relationship), `tenantId`.
+- **Why**: By tracking the *attempt* to schedule, a failed algorithmic run simply marks the `SchedulingRun` as failed with an `errorReason` (e.g., "infeasible constraints"), leaving the innocent `Shifts` untouched in their original `published` state.

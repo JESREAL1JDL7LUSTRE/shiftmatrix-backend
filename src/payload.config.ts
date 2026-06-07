@@ -30,6 +30,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
+  cors: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  csrf: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   collections: [
     Users,
     Tenants,

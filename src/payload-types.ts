@@ -233,6 +233,10 @@ export interface Ward {
      */
     radiusMeters?: number | null;
   };
+  /**
+   * Dynamically generated token for QR code proof-of-presence. Staff must scan this to clock in.
+   */
+  currentDailyToken?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -555,6 +559,7 @@ export interface WardsSelect<T extends boolean = true> {
         longitude?: T;
         radiusMeters?: T;
       };
+  currentDailyToken?: T;
   updatedAt?: T;
   createdAt?: T;
 }

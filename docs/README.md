@@ -1,20 +1,27 @@
-# ShiftMatrix Backend Documentation
+# ShiftMatrix Backend Architecture
 
-Welcome to the ShiftMatrix Backend Documentation. This directory contains detailed guides and references for the architecture, database schemas, access control, and testing strategies used in this project.
+Welcome to the ShiftMatrix Backend documentation. This backend is built on **Payload CMS 3.0** (Next.js 15) and serves as a multi-tenant operational engine for hospital and facility shift scheduling.
 
-## Table of Contents
+## Core Features
 
-1. [Architecture Overview](./architecture.md)
-   - High-level overview of the stack (Payload CMS, Next.js, NeonDB, Drizzle ORM).
-2. [Database Schema](./database_schema.md)
-   - Detailed breakdown of all collections (Tenants, Users, Shifts, etc.) and deeply nested constraints.
-3. [Access Control & RLS](./access_control.md)
-   - Explanation of our Application-Level Row-Level Security (RLS) and multi-tenancy isolation.
-4. [Algorithmic Scheduling](./algorithmic_scheduling.md)
-   - How the asynchronous Google OR-Tools Constraint Programming microservice handles auto-fill requests.
-5. [Testing & Migrations](./testing.md)
-   - Guide on how the Vitest integration suite works, dynamic seeding, and Drizzle database push behaviors.
+1. **Multi-Tenant Architecture**: Strict Data Isolation per hospital/facility via row-level security (`tenantId`).
+2. **Automated Constraint-Based Scheduling**: An asynchronous Python worker powered by Google OR-Tools that auto-fills schedules based on complex union rules, maximum hours, and worker availability.
+3. **Geo-Fenced Clock-ins**: A Haversine formula-backed system ensuring workers can only clock in when physically near their assigned Ward.
+4. **Real-Time Notifications**: A Server-Sent Events (SSE) stream keeping web and mobile clients updated instantly without polling.
 
-### Getting Started for Developers
+## Documentation Index
 
-If you are new to the project, start with the **[Architecture Overview](./architecture.md)** to understand how Payload CMS fits into the Next.js app, then review the **[Access Control](./access_control.md)** to understand how tenant isolation is enforced.
+Please refer to the dedicated documentation files below for deep dives into specific systems:
+
+- [Collections & Multi-Tenancy](./collections.md) - Database schema, Tenant logic, and Access Control.
+- [Auto-Fill Scheduling Solver](./auto-fill-solver.md) - The asynchronous job-tracking pattern, Redis queue, and Python CP-SAT solver.
+- [Geo-Fencing & Attendance](./geofencing-attendance.md) - `TimeLogs` logic, Haversine formula, and the `clock-in` endpoint.
+- [Real-Time Notifications](./real-time-notifications.md) - Event emitters, SSE architecture, and urgent shift broadcasts.
+- [Testing Guide](./testing-guide.md) - Instructions for running the integrated TypeScript (Vitest) and Python (unittest) test suites.
+
+## Tech Stack
+- **Framework**: Payload CMS v3 (Next.js 15 App Router)
+- **Database**: PostgreSQL (via Payload Postgres Adapter)
+- **Queue**: Redis (via ioredis)
+- **Solver**: Python 3.11 + Google OR-Tools (CP-SAT) running in a Docker container
+- **Testing**: Vitest for TypeScript API endpoints, `unittest` for Python microservice.

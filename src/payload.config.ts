@@ -12,6 +12,7 @@ import { Wards } from './collections/Wards'
 import { Certifications } from './collections/Certifications'
 import { Shifts } from './collections/Shifts'
 import { TimeLogs } from './collections/TimeLogs'
+import { SchedulingRuns } from './collections/SchedulingRuns'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -30,6 +31,7 @@ export default buildConfig({
     Certifications,
     Shifts,
     TimeLogs,
+    SchedulingRuns,
     Media,
   ],
   editor: lexicalEditor(),

@@ -1,10 +1,12 @@
 import type { CollectionConfig } from 'payload'
 import { tenantUsers, tenantAdmins } from '../access/tenant'
+import { autoFillEndpoint } from '../endpoints/autoFillEndpoint'
+import { solverWebhookEndpoint } from '../endpoints/solverWebhook'
 
 export const Shifts: CollectionConfig = {
   slug: 'shifts',
   admin: {
-    useAsTitle: 'id',
+    useAsTitle: 'ward',
   },
   access: {
     // Ideally we would filter so workers only see their assigned shifts or urgent shifts,
@@ -14,6 +16,10 @@ export const Shifts: CollectionConfig = {
     create: tenantAdmins,
     delete: tenantAdmins,
   },
+  endpoints: [
+    autoFillEndpoint,
+    solverWebhookEndpoint,
+  ],
   fields: [
     {
       name: 'ward',

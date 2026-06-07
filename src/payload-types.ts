@@ -73,6 +73,7 @@ export interface Config {
     certifications: Certification;
     shifts: Shift;
     timeLogs: TimeLog;
+    schedulingRuns: SchedulingRun;
     media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -87,6 +88,7 @@ export interface Config {
     certifications: CertificationsSelect<false> | CertificationsSelect<true>;
     shifts: ShiftsSelect<false> | ShiftsSelect<true>;
     timeLogs: TimeLogsSelect<false> | TimeLogsSelect<true>;
+    schedulingRuns: SchedulingRunsSelect<false> | SchedulingRunsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -282,6 +284,23 @@ export interface TimeLog {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "schedulingRuns".
+ */
+export interface SchedulingRun {
+  id: number;
+  jobId: string;
+  tenantId: number | Tenant;
+  status: 'pending' | 'completed' | 'failed';
+  errorReason?: string | null;
+  /**
+   * The shifts that were attempted to be filled during this run.
+   */
+  shiftsInvolved?: (number | Shift)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
 export interface Media {
@@ -346,6 +365,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'timeLogs';
         value: number | TimeLog;
+      } | null)
+    | ({
+        relationTo: 'schedulingRuns';
+        value: number | SchedulingRun;
       } | null)
     | ({
         relationTo: 'media';
@@ -545,6 +568,19 @@ export interface TimeLogsSelect<T extends boolean = true> {
       };
   geofenceStatus?: T;
   correctionNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "schedulingRuns_select".
+ */
+export interface SchedulingRunsSelect<T extends boolean = true> {
+  jobId?: T;
+  tenantId?: T;
+  status?: T;
+  errorReason?: T;
+  shiftsInvolved?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -46,8 +46,9 @@ export const Users: CollectionConfig = {
     {
       name: 'maxWeeklyHours',
       type: 'number',
+      defaultValue: 40,
       admin: {
-        condition: (data) => data?.role === 'worker',
+        description: 'Maximum hours this person can be scheduled per week.',
       },
     },
     {
@@ -56,31 +57,28 @@ export const Users: CollectionConfig = {
       relationTo: 'certifications',
       hasMany: true,
       admin: {
-        condition: (data) => data?.role === 'worker',
+        description: 'Qualifications/licences held by this staff member.',
       },
     },
     {
       name: 'preferences',
       type: 'group',
-      admin: {
-        condition: (data) => data?.role === 'worker',
-      },
       fields: [
         {
-          name: 'preferredWards',
+          name: 'preferredDepartments',
           type: 'relationship',
-          relationTo: 'wards',
+          relationTo: 'departments',
           hasMany: true,
+          admin: { description: 'Departments this staff member prefers to be scheduled in.' },
         },
         {
           name: 'unavailableDates',
           type: 'array',
           // ⚠️  DEPRECATED — This field is NOT read by the CP-SAT solver.
           // Submit time-off requests through the Unavailabilities collection instead.
-          // This field will be removed in the next schema migration sprint.
           admin: {
             description:
-              '⚠️ DEPRECATED: This field is ignored by the scheduling solver. Use the Unavailabilities collection to submit time-off requests.',
+              '⚠️ DEPRECATED: Ignored by the scheduling solver. Use the Unavailabilities collection instead.',
           },
           fields: [
             { name: 'startDate', type: 'date', required: true },

@@ -69,7 +69,7 @@ export interface Config {
   collections: {
     users: User;
     tenants: Tenant;
-    wards: Ward;
+    departments: Department;
     certifications: Certification;
     shifts: Shift;
     timeLogs: TimeLog;
@@ -86,7 +86,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
-    wards: WardsSelect<false> | WardsSelect<true>;
+    departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
     certifications: CertificationsSelect<false> | CertificationsSelect<true>;
     shifts: ShiftsSelect<false> | ShiftsSelect<true>;
     timeLogs: TimeLogsSelect<false> | TimeLogsSelect<true>;
@@ -100,7 +100,7 @@ export interface Config {
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: number;
+    defaultIDType: string;
   };
   fallbackLocale: null;
   globals: {};
@@ -138,16 +138,25 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: number;
+  id: string;
   name: string;
   role: 'superadmin' | 'admin' | 'supervisor' | 'worker';
-  tenantId: number | Tenant;
+  tenantId: string | Tenant;
+  /**
+   * Maximum hours this person can be scheduled per week.
+   */
   maxWeeklyHours?: number | null;
-  certifications?: (number | Certification)[] | null;
+  /**
+   * Qualifications/licences held by this staff member.
+   */
+  certifications?: (string | Certification)[] | null;
   preferences?: {
-    preferredWards?: (number | Ward)[] | null;
     /**
-     * ⚠️ DEPRECATED: This field is ignored by the scheduling solver. Use the Unavailabilities collection to submit time-off requests.
+     * Departments this staff member prefers to be scheduled in.
+     */
+    preferredDepartments?: (string | Department)[] | null;
+    /**
+     * ⚠️ DEPRECATED: Ignored by the scheduling solver. Use the Unavailabilities collection instead.
      */
     unavailableDates?:
       | {
@@ -181,7 +190,7 @@ export interface User {
  * via the `definition` "tenants".
  */
 export interface Tenant {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   plan: 'basic' | 'compliance' | 'enterprise';
@@ -207,34 +216,48 @@ export interface Tenant {
  * via the `definition` "certifications".
  */
 export interface Certification {
-  id: number;
+  id: string;
   name: string;
   description?: string | null;
   validityPeriodDays?: number | null;
-  tenantId: number | Tenant;
+  tenantId: string | Tenant;
   updatedAt: string;
   createdAt: string;
 }
 /**
+ * A department, zone, floor, or work area within a tenant organisation.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "wards".
+ * via the `definition` "departments".
  */
-export interface Ward {
-  id: number;
+export interface Department {
+  id: string;
+  /**
+   * e.g. "ICU Ward A", "Warehouse Bay 3", "Front-of-House"
+   */
   name: string;
-  floor?: string | null;
-  tenantId: number | Tenant;
-  requiredBaseCertifications?: (number | Certification)[] | null;
+  /**
+   * Physical location descriptor (floor, building, zone, etc.)
+   */
+  location?: string | null;
+  tenantId: string | Tenant;
+  /**
+   * Certifications every staff member must hold to work in this department.
+   */
+  requiredBaseCertifications?: (string | Certification)[] | null;
+  /**
+   * Optional geo-fence for QR clock-in validation.
+   */
   geolocation?: {
     latitude?: number | null;
     longitude?: number | null;
     /**
-     * Radius in meters where a clock-in is considered valid.
+     * Radius in metres where a clock-in is considered on-site.
      */
     radiusMeters?: number | null;
   };
   /**
-   * Dynamically generated token for QR code proof-of-presence. Staff must scan this to clock in.
+   * Rotating QR token for proof-of-presence clock-in. Regenerate via POST /:id/generate-qr.
    */
   currentDailyToken?: string | null;
   updatedAt: string;
@@ -245,25 +268,28 @@ export interface Ward {
  * via the `definition` "shifts".
  */
 export interface Shift {
-  id: number;
-  ward: number | Ward;
-  tenantId: number | Tenant;
+  id: string;
+  /**
+   * The department or work area this shift is for.
+   */
+  department: string | Department;
+  tenantId: string | Tenant;
   startTime: string;
   endTime: string;
   status: 'draft' | 'published' | 'urgent' | 'filled' | 'closed';
-  assignedStaff?: (number | User)[] | null;
+  assignedStaff?: (string | User)[] | null;
   staffingRequirements?:
     | (
         | {
-            role: 'RN' | 'LPN' | 'CNA' | 'Technician' | 'Supervisor';
+            role: 'staff' | 'senior_staff' | 'supervisor' | 'specialist' | 'manager';
             count: number;
-            mustHaveCerts?: (number | Certification)[] | null;
+            mustHaveCerts?: (string | Certification)[] | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'RoleRequirement';
           }
         | {
-            cert: number | Certification;
+            cert: string | Certification;
             count: number;
             id?: string | null;
             blockName?: string | null;
@@ -285,10 +311,10 @@ export interface Shift {
  * via the `definition` "timeLogs".
  */
 export interface TimeLog {
-  id: number;
-  staffId: number | User;
-  tenantId: number | Tenant;
-  shiftId?: (number | null) | Shift;
+  id: string;
+  staffId: string | User;
+  tenantId: string | Tenant;
+  shiftId?: (string | null) | Shift;
   eventType: 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'correction';
   timestamp: string;
   ipAddress?: string | null;
@@ -310,15 +336,15 @@ export interface TimeLog {
  * via the `definition` "schedulingRuns".
  */
 export interface SchedulingRun {
-  id: number;
+  id: string;
   jobId: string;
-  tenantId: number | Tenant;
+  tenantId: string | Tenant;
   status: 'pending' | 'completed' | 'failed';
   errorReason?: string | null;
   /**
    * The shifts that were attempted to be filled during this run.
    */
-  shiftsInvolved?: (number | Shift)[] | null;
+  shiftsInvolved?: (string | Shift)[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -327,9 +353,9 @@ export interface SchedulingRun {
  * via the `definition` "unavailabilities".
  */
 export interface Unavailability {
-  id: number;
-  workerId: number | User;
-  tenantId: number | Tenant;
+  id: string;
+  workerId: string | User;
+  tenantId: string | Tenant;
   startTime: string;
   endTime: string;
   reason: string;
@@ -342,11 +368,11 @@ export interface Unavailability {
  * via the `definition` "notifications".
  */
 export interface Notification {
-  id: number;
+  id: string;
   message: string;
   type: 'info' | 'urgent' | 'shift_alert';
-  recipientId: number | User;
-  tenantId: number | Tenant;
+  recipientId: string | User;
+  tenantId: string | Tenant;
   read?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -356,7 +382,7 @@ export interface Notification {
  * via the `definition` "media".
  */
 export interface Media {
-  id: number;
+  id: string;
   alt: string;
   updatedAt: string;
   createdAt: string;
@@ -375,7 +401,7 @@ export interface Media {
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: number;
+  id: string;
   key: string;
   data:
     | {
@@ -392,52 +418,52 @@ export interface PayloadKv {
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: number;
+  id: string;
   document?:
     | ({
         relationTo: 'users';
-        value: number | User;
+        value: string | User;
       } | null)
     | ({
         relationTo: 'tenants';
-        value: number | Tenant;
+        value: string | Tenant;
       } | null)
     | ({
-        relationTo: 'wards';
-        value: number | Ward;
+        relationTo: 'departments';
+        value: string | Department;
       } | null)
     | ({
         relationTo: 'certifications';
-        value: number | Certification;
+        value: string | Certification;
       } | null)
     | ({
         relationTo: 'shifts';
-        value: number | Shift;
+        value: string | Shift;
       } | null)
     | ({
         relationTo: 'timeLogs';
-        value: number | TimeLog;
+        value: string | TimeLog;
       } | null)
     | ({
         relationTo: 'schedulingRuns';
-        value: number | SchedulingRun;
+        value: string | SchedulingRun;
       } | null)
     | ({
         relationTo: 'unavailabilities';
-        value: number | Unavailability;
+        value: string | Unavailability;
       } | null)
     | ({
         relationTo: 'notifications';
-        value: number | Notification;
+        value: string | Notification;
       } | null)
     | ({
         relationTo: 'media';
-        value: number | Media;
+        value: string | Media;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -447,10 +473,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: number;
+  id: string;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   key?: string | null;
   value?:
@@ -470,7 +496,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: number;
+  id: string;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -489,7 +515,7 @@ export interface UsersSelect<T extends boolean = true> {
   preferences?:
     | T
     | {
-        preferredWards?: T;
+        preferredDepartments?: T;
         unavailableDates?:
           | T
           | {
@@ -545,11 +571,11 @@ export interface TenantsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "wards_select".
+ * via the `definition` "departments_select".
  */
-export interface WardsSelect<T extends boolean = true> {
+export interface DepartmentsSelect<T extends boolean = true> {
   name?: T;
-  floor?: T;
+  location?: T;
   tenantId?: T;
   requiredBaseCertifications?: T;
   geolocation?:
@@ -580,7 +606,7 @@ export interface CertificationsSelect<T extends boolean = true> {
  * via the `definition` "shifts_select".
  */
 export interface ShiftsSelect<T extends boolean = true> {
-  ward?: T;
+  department?: T;
   tenantId?: T;
   startTime?: T;
   endTime?: T;

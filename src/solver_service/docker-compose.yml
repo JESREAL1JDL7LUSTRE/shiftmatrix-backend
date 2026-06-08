@@ -14,7 +14,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - WEBHOOK_URL=http://host.docker.internal:3000/api/shifts/solver-webhook
+      - WEBHOOK_URL=http://host.docker.internal:3000/api/solver-webhook
       - WORKER_SECRET=${WORKER_SECRET:-my_super_secret_dev_key}
     depends_on:
       - redis

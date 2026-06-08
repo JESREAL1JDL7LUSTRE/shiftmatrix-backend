@@ -4,7 +4,7 @@ import { tenantUsers, tenantAdmins } from '../access/tenant'
 export const Shifts: CollectionConfig = {
   slug: 'shifts',
   admin: {
-    useAsTitle: 'ward',
+    useAsTitle: 'startTime',
   },
   access: {
     // Ideally we would filter so workers only see their assigned shifts or urgent shifts,
@@ -16,10 +16,11 @@ export const Shifts: CollectionConfig = {
   },
   fields: [
     {
-      name: 'ward',
+      name: 'department',
       type: 'relationship',
-      relationTo: 'wards',
+      relationTo: 'departments',
       required: true,
+      admin: { description: 'The department or work area this shift is for.' },
     },
     {
       name: 'tenantId',
@@ -74,11 +75,11 @@ export const Shifts: CollectionConfig = {
               type: 'select',
               required: true,
               options: [
-                { label: 'RN', value: 'RN' },
-                { label: 'LPN', value: 'LPN' },
-                { label: 'CNA', value: 'CNA' },
-                { label: 'Technician', value: 'Technician' },
-                { label: 'Supervisor', value: 'Supervisor' },
+                { label: 'Staff', value: 'staff' },
+                { label: 'Senior Staff', value: 'senior_staff' },
+                { label: 'Supervisor', value: 'supervisor' },
+                { label: 'Specialist', value: 'specialist' },
+                { label: 'Manager', value: 'manager' },
               ],
             },
             {

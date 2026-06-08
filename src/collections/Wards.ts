@@ -1,10 +1,15 @@
 import type { CollectionConfig } from 'payload'
 import { tenantUsers, tenantAdmins } from '../access/tenant'
 
+/**
+ * Departments — generic work-area/location entity (previously 'wards').
+ * Works for hospitals, warehouses, retail floors, construction sites, etc.
+ */
 export const Wards: CollectionConfig = {
-  slug: 'wards',
+  slug: 'departments',
   admin: {
     useAsTitle: 'name',
+    description: 'A department, zone, floor, or work area within a tenant organisation.',
   },
   access: {
     read: tenantUsers,
@@ -17,10 +22,12 @@ export const Wards: CollectionConfig = {
       name: 'name',
       type: 'text',
       required: true,
+      admin: { description: 'e.g. "ICU Ward A", "Warehouse Bay 3", "Front-of-House"' },
     },
     {
-      name: 'floor',
+      name: 'location',
       type: 'text',
+      admin: { description: 'Physical location descriptor (floor, building, zone, etc.)' },
     },
     {
       name: 'tenantId',
@@ -33,18 +40,20 @@ export const Wards: CollectionConfig = {
       type: 'relationship',
       relationTo: 'certifications',
       hasMany: true,
+      admin: { description: 'Certifications every staff member must hold to work in this department.' },
     },
     {
       name: 'geolocation',
       type: 'group',
+      admin: { description: 'Optional geo-fence for QR clock-in validation.' },
       fields: [
         { name: 'latitude', type: 'number' },
         { name: 'longitude', type: 'number' },
-        { 
-          name: 'radiusMeters', 
-          type: 'number', 
+        {
+          name: 'radiusMeters',
+          type: 'number',
           defaultValue: 100,
-          admin: { description: 'Radius in meters where a clock-in is considered valid.' }
+          admin: { description: 'Radius in metres where a clock-in is considered on-site.' },
         },
       ],
     },
@@ -52,8 +61,8 @@ export const Wards: CollectionConfig = {
       name: 'currentDailyToken',
       type: 'text',
       admin: {
-        description: 'Dynamically generated token for QR code proof-of-presence. Staff must scan this to clock in.',
-        readOnly: true, // Should only be updated via the API
+        description: 'Rotating QR token for proof-of-presence clock-in. Regenerate via POST /:id/generate-qr.',
+        readOnly: true,
       },
     },
   ],
@@ -65,25 +74,22 @@ export const Wards: CollectionConfig = {
         if (!req.user || req.user.role !== 'admin') {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
-        
-        const id = req.routeParams?.id as string;
-        if (!id) return Response.json({ error: 'Missing Ward ID' }, { status: 400 });
 
-        // Generate a cryptographically secure 32-character hex string
-        const crypto = require('crypto');
-        const token = crypto.randomBytes(16).toString('hex');
+        const id = req.routeParams?.id as string
+        if (!id) return Response.json({ error: 'Missing Department ID' }, { status: 400 })
+
+        const crypto = require('crypto')
+        const token = crypto.randomBytes(16).toString('hex')
 
         try {
           await req.payload.update({
-            collection: 'wards',
+            collection: 'departments',
             id,
-            data: {
-              currentDailyToken: token,
-            },
-          });
-          return Response.json({ token, message: 'QR Token regenerated successfully' }, { status: 200 });
+            data: { currentDailyToken: token },
+          })
+          return Response.json({ token, message: 'QR token regenerated successfully' }, { status: 200 })
         } catch (e) {
-          return Response.json({ error: 'Failed to update Ward token' }, { status: 500 });
+          return Response.json({ error: 'Failed to update department token' }, { status: 500 })
         }
       },
     },

@@ -34,9 +34,9 @@ def solve_schedule(job_data: dict) -> dict:
                 if s_start < u_end and s_end > u_start:
                     model.Add(x[(w, s)] == 0)
             
-    # Constraint 1: Each slot must have exactly 1 worker
+    # Constraint 1: Maximize filled slots (each slot can have at most 1 worker)
     for s in range(num_slots):
-        model.AddExactlyOne(x[(w, s)] for w in range(num_workers))
+        model.AddAtMostOne(x[(w, s)] for w in range(num_workers))
         
     # Constraint 2: Worker Certifications
     for w in range(num_workers):
@@ -86,10 +86,8 @@ def solve_schedule(job_data: dict) -> dict:
                     # Cannot do both shifts
                     model.AddImplication(x[(w, s1)], x[(w, s2)].Not())
 
-    # Objective: We can just maximize assignments if some slots were optional, 
-    # but since exactly one is enforced for all slots, any valid solution is optimal.
-    # To favor a balanced schedule, we could minimize the maximum shifts per worker, etc.
-    # For now, just finding a valid assignment.
+    # Objective: Maximize assignments
+    model.Maximize(sum(x[(w, s)] for w in range(num_workers) for s in range(num_slots)))
     
     solver = cp_model.CpSolver()
     # solver.parameters.max_time_in_seconds = 10.0

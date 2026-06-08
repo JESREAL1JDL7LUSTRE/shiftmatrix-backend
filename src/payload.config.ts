@@ -59,6 +59,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/shiftmatrix',
     },
+    idType: 'uuid',
     push: process.env.NODE_ENV !== 'production', // Automatically pushes schema to NeonDB in dev mode
   }),
   sharp,

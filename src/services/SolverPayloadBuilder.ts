@@ -112,7 +112,7 @@ export function buildSlotsForShift(shift: any): SolverSlotPayload[] {
   const durationHours = (endMs - startMs) / 3_600_000
 
   const shiftBaseCerts = (
-    (shift.ward as any)?.requiredBaseCertifications || []
+    (shift.department as any)?.requiredBaseCertifications || []
   ).map((c: any) => (typeof c === 'object' ? c.id : c))
 
   const reqs: any[] = shift.staffingRequirements || []

@@ -34,9 +34,9 @@ export function checkUnionRestRules(shift: Shift, scheduledShifts: Shift[]): boo
 export function checkCertifications(user: User, shift: any, requirementBlock: any): boolean {
   const userCertIds = (user.certifications || []).map(c => typeof c === 'object' ? c.id : c)
 
-  // 1. Check Base Ward Certifications
-  if (shift.ward && shift.ward.requiredBaseCertifications) {
-    for (const reqCert of shift.ward.requiredBaseCertifications) {
+  // 1. Check Base Department Certifications
+  if (shift.department && shift.department.requiredBaseCertifications) {
+    for (const reqCert of shift.department.requiredBaseCertifications) {
       const reqId = typeof reqCert === 'object' ? reqCert.id : reqCert
       if (!userCertIds.includes(reqId)) return false
     }

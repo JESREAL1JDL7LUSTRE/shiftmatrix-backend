@@ -39,7 +39,7 @@ export async function enqueueSchedulingJob(
     collection: 'shifts',
     where: {
       tenantId: { equals: tenantId },
-      status: { equals: 'published' },
+      status: { in: ['published', 'draft'] },
       startTime: { greater_than_equal: startDate },
       endTime: { less_than_equal: endDate },
     },

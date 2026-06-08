@@ -8,20 +8,40 @@ import type { Endpoint } from 'payload'
 import { notificationBus } from '../infrastructure/NotificationBus'
 
 export const notificationsStreamEndpoint: Endpoint = {
-  path: '/notifications/stream',
+  path: '/stream-notifications',
   method: 'get',
   handler: async (req) => {
-    if (!req.user) {
+    let user = req.user
+
+    // If no user in req (e.g. EventSource cannot send Authorization header cross-origin),
+    // check the query string for the token.
+    if (!user) {
+      const url = new URL(req.url)
+      const token = url.searchParams.get('token')
+      
+      if (token) {
+        try {
+          const jwt = require('jsonwebtoken')
+          const decoded = jwt.verify(token, req.payload.secret)
+          if (decoded && decoded.id) {
+            user = { id: decoded.id } as any
+          }
+        } catch (err) {
+          // invalid token
+        }
+      }
+    }
+
+    if (!user) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const userId = req.user.id
+    const userId = user.id
 
     const headers = new Headers({
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      'Connection': 'keep-alive'
     })
 
     const stream = new ReadableStream({

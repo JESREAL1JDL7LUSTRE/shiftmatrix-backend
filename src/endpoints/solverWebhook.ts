@@ -65,10 +65,8 @@ export const solverWebhookEndpoint: Endpoint = {
 
       const updates = []
       for (const [shiftId, workerIds] of Object.entries(shiftMap)) {
-        // Fetch current shift to merge staff and check filled status
         const currentShift = await req.payload.findByID({ collection: 'shifts', id: shiftId })
-        const currentStaff = (currentShift.assignedStaff || []).map((s: any) => typeof s === 'object' ? s.id : s)
-        const newStaff = [...new Set([...currentStaff, ...workerIds])]
+        const newStaff = [...new Set([...workerIds])]
         
         const shiftReqCount = (currentShift.staffingRequirements || []).reduce((acc: number, req: any) => acc + (req.count || 1), 0)
         const isFilled = newStaff.length >= shiftReqCount

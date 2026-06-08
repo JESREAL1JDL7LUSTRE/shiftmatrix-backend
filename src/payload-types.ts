@@ -72,6 +72,7 @@ export interface Config {
     departments: Department;
     certifications: Certification;
     shifts: Shift;
+    'job-roles': JobRole;
     timeLogs: TimeLog;
     schedulingRuns: SchedulingRun;
     unavailabilities: Unavailability;
@@ -89,6 +90,7 @@ export interface Config {
     departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
     certifications: CertificationsSelect<false> | CertificationsSelect<true>;
     shifts: ShiftsSelect<false> | ShiftsSelect<true>;
+    'job-roles': JobRolesSelect<false> | JobRolesSelect<true>;
     timeLogs: TimeLogsSelect<false> | TimeLogsSelect<true>;
     schedulingRuns: SchedulingRunsSelect<false> | SchedulingRunsSelect<true>;
     unavailabilities: UnavailabilitiesSelect<false> | UnavailabilitiesSelect<true>;
@@ -140,6 +142,10 @@ export interface UserAuthOperations {
 export interface User {
   id: string;
   name: string;
+  /**
+   * The specific job title/role for scheduling (e.g., Security Guard)
+   */
+  jobRole?: (string | null) | JobRole;
   role: 'superadmin' | 'admin' | 'supervisor' | 'worker';
   tenantId: string | Tenant;
   /**
@@ -184,6 +190,32 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "job-roles".
+ */
+export interface JobRole {
+  id: string;
+  /**
+   * Name of the role (e.g., Security Guard, Janitor, Supervisor)
+   */
+  name: string;
+  tenantId: string | Tenant;
+  /**
+   * Default start time in HH:mm format (e.g., 06:00)
+   */
+  defaultStartTime?: string | null;
+  /**
+   * Default end time in HH:mm format (e.g., 14:00)
+   */
+  defaultEndTime?: string | null;
+  /**
+   * Hex color code for UI display (e.g., #28CB8B)
+   */
+  colorCode?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -281,7 +313,7 @@ export interface Shift {
   staffingRequirements?:
     | (
         | {
-            role: 'staff' | 'senior_staff' | 'supervisor' | 'specialist' | 'manager';
+            role: string | JobRole;
             count: number;
             mustHaveCerts?: (string | Certification)[] | null;
             id?: string | null;
@@ -441,6 +473,10 @@ export interface PayloadLockedDocument {
         value: string | Shift;
       } | null)
     | ({
+        relationTo: 'job-roles';
+        value: string | JobRole;
+      } | null)
+    | ({
         relationTo: 'timeLogs';
         value: string | TimeLog;
       } | null)
@@ -508,6 +544,7 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  jobRole?: T;
   role?: T;
   tenantId?: T;
   maxWeeklyHours?: T;
@@ -640,6 +677,19 @@ export interface ShiftsSelect<T extends boolean = true> {
               blockName?: T;
             };
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "job-roles_select".
+ */
+export interface JobRolesSelect<T extends boolean = true> {
+  name?: T;
+  tenantId?: T;
+  defaultStartTime?: T;
+  defaultEndTime?: T;
+  colorCode?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -20,6 +20,14 @@ export const Users: CollectionConfig = {
       required: true,
     },
     {
+      name: 'jobRole',
+      type: 'relationship',
+      relationTo: 'job-roles',
+      admin: {
+        description: 'The specific job title/role for scheduling (e.g., Security Guard)',
+      },
+    },
+    {
       name: 'role',
       type: 'select',
       required: true,

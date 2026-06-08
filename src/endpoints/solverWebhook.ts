@@ -23,7 +23,7 @@ export const solverWebhookEndpoint: Endpoint = {
     let body
     try {
       body = JSON.parse(rawBody)
-    } catch {
+    } catch (e) {
       return Response.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 

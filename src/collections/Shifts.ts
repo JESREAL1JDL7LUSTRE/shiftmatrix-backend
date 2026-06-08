@@ -72,15 +72,9 @@ export const Shifts: CollectionConfig = {
           fields: [
             {
               name: 'role',
-              type: 'select',
+              type: 'relationship',
+              relationTo: 'job-roles',
               required: true,
-              options: [
-                { label: 'Staff', value: 'staff' },
-                { label: 'Senior Staff', value: 'senior_staff' },
-                { label: 'Supervisor', value: 'supervisor' },
-                { label: 'Specialist', value: 'specialist' },
-                { label: 'Manager', value: 'manager' },
-              ],
             },
             {
               name: 'count',

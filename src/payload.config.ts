@@ -11,6 +11,7 @@ import { Tenants } from './collections/Tenants'
 import { Wards } from './collections/Wards'
 import { Certifications } from './collections/Certifications'
 import { Shifts } from './collections/Shifts'
+import { JobRoles } from './collections/JobRoles'
 import { TimeLogs } from './collections/TimeLogs'
 import { SchedulingRuns } from './collections/SchedulingRuns'
 import { Unavailabilities } from './collections/Unavailabilities'
@@ -38,6 +39,7 @@ export default buildConfig({
     Wards,
     Certifications,
     Shifts,
+    JobRoles,
     TimeLogs,
     SchedulingRuns,
     Unavailabilities,

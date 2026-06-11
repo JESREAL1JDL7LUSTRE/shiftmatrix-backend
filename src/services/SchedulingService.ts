@@ -15,7 +15,7 @@ import { enqueueJob } from '../infrastructure/QueueService'
 import {
   buildWorkerCurrentHours,
   buildWorkerPayload,
-  buildSlotsForShift,
+  buildGeneratedSlotsForWorker,
   type SolverJobPayload,
 } from './SolverPayloadBuilder'
 
@@ -23,6 +23,7 @@ export type EnqueueOptions = {
   tenantId: string
   startDate: string
   endDate: string
+  timezoneOffset?: number
 }
 
 /**
@@ -32,19 +33,26 @@ export type EnqueueOptions = {
  */
 export async function enqueueSchedulingJob(
   payload: Payload,
-  { tenantId, startDate, endDate }: EnqueueOptions
+  { tenantId, startDate, endDate, timezoneOffset = 0 }: EnqueueOptions
 ): Promise<string> {
-  // 1. Fetch open shifts in the date window
-  const shiftsRes = await payload.find({
+  // 1. Fetch available departments for fallback (since shifts require a department)
+  const deptsRes = await payload.find({
+    collection: 'departments',
+    where: { tenantId: { equals: tenantId } },
+    limit: 1,
+  })
+  const fallbackDeptId = deptsRes.docs.length > 0 ? (deptsRes.docs[0].id as string) : ''
+
+  // Clear existing shifts in the target window to prevent duplicates and overlapping old states
+  await payload.delete({
     collection: 'shifts',
     where: {
       tenantId: { equals: tenantId },
-      status: { in: ['published', 'draft', 'filled'] },
-      startTime: { greater_than_equal: startDate },
-      endTime: { less_than_equal: endDate },
+      and: [
+        { startTime: { greater_than_equal: startDate } },
+        { startTime: { less_than_equal: endDate } },
+      ],
     },
-    depth: 2,
-    limit: 1000,
   })
 
   // 2. Fetch all workers in the tenant
@@ -97,12 +105,30 @@ export async function enqueueSchedulingJob(
     buildWorkerPayload(w, unavailRes.docs, currentHours[w.id] ?? 0, defaultMaxHours)
   )
 
-  // 8. Build slots payload (pure function — no DB)
-  const slots = shiftsRes.docs.flatMap((shift: any) => buildSlotsForShift(shift))
+  // 8. Build slots payload dynamically based on worker job roles
+  const slots: any[] = []
+  const startD = new Date(startDate)
+  const endD = new Date(endDate)
+
+  for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+    // Convert the UTC loop pointer to Local time before extracting the date string
+    const localD = new Date(d.getTime() - (timezoneOffset * 60 * 1000))
+    const dateStr = localD.toISOString().split('T')[0]
+
+    for (const worker of workersRes.docs) {
+      const preferredDept = worker.preferences?.preferredDepartments?.[0]
+      const deptId = preferredDept
+        ? (typeof preferredDept === 'object' ? preferredDept.id : preferredDept)
+        : fallbackDeptId
+
+      const generatedSlots = buildGeneratedSlotsForWorker(worker, dateStr, deptId, timezoneOffset)
+      slots.push(...generatedSlots)
+    }
+  }
 
   // 9. Generate job ID and create the SchedulingRun tracking record
   const jobId = randomUUID()
-  const uniqueShiftIds = [...new Set(slots.map(s => s.shiftId))]
+  const uniqueShiftIds = [...new Set(slots.map(s => s.shiftId))].filter(id => !id.startsWith('NEW__'))
 
   await payload.create({
     collection: 'schedulingRuns',

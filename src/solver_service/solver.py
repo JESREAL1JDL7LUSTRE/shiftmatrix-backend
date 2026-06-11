@@ -46,26 +46,27 @@ def solve_schedule(job_data: dict) -> dict:
             # If the worker lacks required certs, x[w, s] must be 0
             if not slot_certs.issubset(worker_certs):
                 model.Add(x[(w, s)] == 0)
+
+            # Constraint 2.5: Target Worker ID
+            target_id = slots[s].get('targetWorkerId')
+            if target_id and target_id != workers[w].get('id'):
+                model.Add(x[(w, s)] == 0)
                 
-    # Constraint 3: Max Weekly Hours
-    for w in range(num_workers):
-        worker_max = workers[w].get('maxWeeklyHours', tenant_settings.get('maxWeeklyHours', 40))
-        current_hours = workers[w].get('currentHours', 0)
-        
-        # Calculate expected added hours
-        # slot_hours * x[w,s]
-        # Since CP-SAT works with integers, we can multiply hours by 10 to handle 0.5 hours, 
-        # or just round to integers for simplicity. Let's multiply by 10.
-        terms = []
-        for s in range(num_slots):
-            dur_hours = slots[s].get('durationHours', 0)
-            terms.append(int(dur_hours * 10) * x[(w, s)])
-            
-        max_allowed = int((worker_max - current_hours) * 10)
-        if max_allowed < 0:
-            max_allowed = 0
-            
-        model.Add(sum(terms) <= max_allowed)
+    # Constraint 3: Max Weekly Hours (DISABLED - User requested all workers every day)
+    # for w in range(num_workers):
+    #     worker_max = workers[w].get('maxWeeklyHours', tenant_settings.get('maxWeeklyHours', 40))
+    #     current_hours = workers[w].get('currentHours', 0)
+    #     
+    #     terms = []
+    #     for s in range(num_slots):
+    #         dur_hours = slots[s].get('durationHours', 0)
+    #         terms.append(int(dur_hours * 10) * x[(w, s)])
+    #         
+    #     max_allowed = int((worker_max - current_hours) * 10)
+    #     if max_allowed < 0:
+    #         max_allowed = 0
+    #         
+    #     model.Add(sum(terms) <= max_allowed)
         
     # Constraint 4: Time Overlaps & Rest Rules
     gap_hours = 12 if tenant_settings.get('activateUnionRestRules', False) else 0

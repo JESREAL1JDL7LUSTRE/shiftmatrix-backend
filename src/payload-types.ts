@@ -201,7 +201,6 @@ export interface JobRole {
    * Name of the role (e.g., Security Guard, Janitor, Supervisor)
    */
   name: string;
-  tenantId: string | Tenant;
   /**
    * Default start time in HH:mm format (e.g., 06:00)
    */
@@ -686,7 +685,6 @@ export interface ShiftsSelect<T extends boolean = true> {
  */
 export interface JobRolesSelect<T extends boolean = true> {
   name?: T;
-  tenantId?: T;
   defaultStartTime?: T;
   defaultEndTime?: T;
   colorCode?: T;

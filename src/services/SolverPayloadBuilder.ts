@@ -31,6 +31,7 @@ export type SolverSlotPayload = {
   startTimeMs: number // Unix ms — used for integer gap/overlap math
   endTimeMs: number   // Unix ms — used for integer gap/overlap math
   requiredCerts: string[]
+  targetWorkerId?: string // Optional constraint to force a slot to a specific worker
 }
 
 export type SolverJobPayload = {
@@ -146,4 +147,54 @@ export function buildSlotsForShift(shift: any): SolverSlotPayload[] {
   })
 
   return slots
+}
+
+/**
+ * Generates a candidate slot specific to a worker for a given date.
+ */
+export function buildGeneratedSlotsForWorker(
+  worker: any,
+  dateStr: string,
+  departmentId: string,
+  timezoneOffset: number = 0
+): SolverSlotPayload[] {
+  if (!worker.jobRole || !worker.jobRole.defaultStartTime || !worker.jobRole.defaultEndTime) {
+    return []
+  }
+
+  // Parse local hours/minutes
+  const [startH, startM] = worker.jobRole.defaultStartTime.split(':').map(Number)
+  const [endH, endM] = worker.jobRole.defaultEndTime.split(':').map(Number)
+
+  // Construct base UTC dates for the day
+  const slotStart = new Date(`${dateStr}T00:00:00.000Z`)
+  const slotEnd = new Date(`${dateStr}T00:00:00.000Z`)
+
+  // Add the local time components, then add timezone offset (in minutes) 
+  // timezoneOffset returns UTC - Local in minutes. Example: +08:00 is -480.
+  // So UTC Time = Local Time + Offset
+  slotStart.setUTCHours(startH, startM + timezoneOffset, 0, 0)
+  slotEnd.setUTCHours(endH, endM + timezoneOffset, 0, 0)
+  
+  let durMs = slotEnd.getTime() - slotStart.getTime()
+  if (durMs < 0) {
+    // If end time is before start time, it crosses midnight. Add 24 hours.
+    durMs += 24 * 60 * 60 * 1000 
+    slotEnd.setTime(slotEnd.getTime() + 24 * 60 * 60 * 1000)
+  }
+  
+  const durationHours = durMs / 3_600_000
+  const jobRoleId = typeof worker.jobRole === 'object' ? worker.jobRole.id : worker.jobRole
+
+  return [{
+    shiftId: `NEW__${worker.id}__${slotStart.getTime()}__${slotEnd.getTime()}__${jobRoleId}__${departmentId}`,
+    blockIndex: 0,
+    targetWorkerId: worker.id,
+    durationHours,
+    startTime: slotStart.toISOString(),
+    endTime: slotEnd.toISOString(),
+    startTimeMs: slotStart.getTime(),
+    endTimeMs: slotEnd.getTime(),
+    requiredCerts: [], // Assumed covered by the worker's role
+  }]
 }

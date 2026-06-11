@@ -18,7 +18,7 @@ export const autoFillEndpoint: Endpoint = {
       body = req.body || {}
     }
 
-    const { startDate, endDate } = body
+    const { startDate, endDate, timezoneOffset = 0 } = body
     if (!startDate || !endDate) {
       return Response.json({ error: 'startDate and endDate required' }, { status: 400 })
     }
@@ -32,7 +32,7 @@ export const autoFillEndpoint: Endpoint = {
         ? (req.user.tenantId as any).id
         : req.user.tenantId
 
-    const jobId = await enqueueSchedulingJob(req.payload, { tenantId, startDate, endDate })
+    const jobId = await enqueueSchedulingJob(req.payload, { tenantId, startDate, endDate, timezoneOffset })
 
     return Response.json(
       { message: 'Schedule computation queued successfully.', jobId, status: 'processing' },

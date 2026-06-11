@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { tenantUsers, tenantAdmins } from '../access/tenant'
+import { anyUser, isSuperAdmin } from '../access/tenant'
 
 export const JobRoles: CollectionConfig = {
   slug: 'job-roles',
@@ -7,10 +7,10 @@ export const JobRoles: CollectionConfig = {
     useAsTitle: 'name',
   },
   access: {
-    read: tenantUsers,
-    update: tenantAdmins,
-    create: tenantAdmins,
-    delete: tenantAdmins,
+    read: anyUser,
+    update: anyUser,
+    create: anyUser,
+    delete: anyUser,
   },
   fields: [
     {
@@ -21,12 +21,7 @@ export const JobRoles: CollectionConfig = {
         description: 'Name of the role (e.g., Security Guard, Janitor, Supervisor)',
       },
     },
-    {
-      name: 'tenantId',
-      type: 'relationship',
-      relationTo: 'tenants',
-      required: true,
-    },
+
     {
       name: 'defaultStartTime',
       type: 'text',

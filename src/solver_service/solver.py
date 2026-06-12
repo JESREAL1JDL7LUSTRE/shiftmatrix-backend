@@ -52,21 +52,27 @@ def solve_schedule(job_data: dict) -> dict:
             if target_id and target_id != workers[w].get('id'):
                 model.Add(x[(w, s)] == 0)
                 
-    # Constraint 3: Max Weekly Hours (DISABLED - User requested all workers every day)
-    # for w in range(num_workers):
-    #     worker_max = workers[w].get('maxWeeklyHours', tenant_settings.get('maxWeeklyHours', 40))
-    #     current_hours = workers[w].get('currentHours', 0)
-    #     
-    #     terms = []
-    #     for s in range(num_slots):
-    #         dur_hours = slots[s].get('durationHours', 0)
-    #         terms.append(int(dur_hours * 10) * x[(w, s)])
-    #         
-    #     max_allowed = int((worker_max - current_hours) * 10)
-    #     if max_allowed < 0:
-    #         max_allowed = 0
-    #         
-    #     model.Add(sum(terms) <= max_allowed)
+            # Constraint 2.6: Required Role
+            req_role = slots[s].get('requiredRole')
+            worker_role = workers[w].get('jobRole')
+            if req_role and worker_role and req_role != worker_role:
+                model.Add(x[(w, s)] == 0)
+                
+    # Constraint 3: Max Weekly Hours
+    for w in range(num_workers):
+        worker_max = workers[w].get('maxWeeklyHours', tenant_settings.get('maxWeeklyHours', 40))
+        current_hours = workers[w].get('currentHours', 0)
+        
+        terms = []
+        for s in range(num_slots):
+            dur_hours = slots[s].get('durationHours', 0)
+            terms.append(int(dur_hours * 10) * x[(w, s)])
+            
+        max_allowed = int((worker_max - current_hours) * 10)
+        if max_allowed < 0:
+            max_allowed = 0
+            
+        model.Add(sum(terms) <= max_allowed)
         
     # Constraint 4: Time Overlaps & Rest Rules
     gap_hours = 12 if tenant_settings.get('activateUnionRestRules', False) else 0
@@ -87,8 +93,21 @@ def solve_schedule(job_data: dict) -> dict:
                     # Cannot do both shifts
                     model.AddImplication(x[(w, s1)], x[(w, s2)].Not())
 
-    # Objective: Maximize assignments
-    model.Maximize(sum(x[(w, s)] for w in range(num_workers) for s in range(num_slots)))
+    # Objective: Maximize assignments and minimize perturbations
+    objective_terms = []
+    for w in range(num_workers):
+        for s in range(num_slots):
+            # Base reward for assigning a shift
+            reward = 10
+            # Additional reward if maintaining a previous assignment (minimum perturbation)
+            worker_id = workers[w].get('id')
+            prev_assigned = slots[s].get('previouslyAssignedWorkers', [])
+            if worker_id in prev_assigned:
+                reward += 100
+                
+            objective_terms.append(reward * x[(w, s)])
+            
+    model.Maximize(sum(objective_terms))
     
     solver = cp_model.CpSolver()
     # solver.parameters.max_time_in_seconds = 10.0

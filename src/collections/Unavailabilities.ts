@@ -28,19 +28,62 @@ export const Unavailabilities: CollectionConfig = {
       required: true,
     },
     {
+      name: 'type',
+      type: 'select',
+      options: [
+        { label: 'Temporary (Date Range)', value: 'temporary' },
+        { label: 'Permanent (Recurring)', value: 'permanent' },
+      ],
+      defaultValue: 'temporary',
+      required: true,
+    },
+    {
       name: 'startTime',
       type: 'date',
-      required: true,
       admin: {
         date: { pickerAppearance: 'dayAndTime' },
+        condition: (data) => data.type === 'temporary',
       },
     },
     {
       name: 'endTime',
       type: 'date',
-      required: true,
       admin: {
         date: { pickerAppearance: 'dayAndTime' },
+        condition: (data) => data.type === 'temporary',
+      },
+    },
+    {
+      name: 'daysOfWeek',
+      type: 'select',
+      hasMany: true,
+      options: [
+        { label: 'Monday', value: 'monday' },
+        { label: 'Tuesday', value: 'tuesday' },
+        { label: 'Wednesday', value: 'wednesday' },
+        { label: 'Thursday', value: 'thursday' },
+        { label: 'Friday', value: 'friday' },
+        { label: 'Saturday', value: 'saturday' },
+        { label: 'Sunday', value: 'sunday' },
+      ],
+      admin: {
+        condition: (data) => data.type === 'permanent',
+      },
+    },
+    {
+      name: 'permanentStartTime',
+      type: 'text',
+      admin: {
+        description: 'Time of day (e.g., 09:00) or leave blank for whole day',
+        condition: (data) => data.type === 'permanent',
+      },
+    },
+    {
+      name: 'permanentEndTime',
+      type: 'text',
+      admin: {
+        description: 'Time of day (e.g., 17:00) or leave blank for whole day',
+        condition: (data) => data.type === 'permanent',
       },
     },
     {

@@ -1,4 +1,5 @@
-ortools==9.8.3296
-redis==5.0.1
-requests==2.31.0
-pydantic==2.5.3
+ortools>=9.15.6755
+redis
+requests
+pydantic
+python-dotenv

@@ -73,6 +73,7 @@ export interface Config {
     certifications: Certification;
     shifts: Shift;
     'job-roles': JobRole;
+    'calendar-events': CalendarEvent;
     timeLogs: TimeLog;
     schedulingRuns: SchedulingRun;
     unavailabilities: Unavailability;
@@ -91,6 +92,7 @@ export interface Config {
     certifications: CertificationsSelect<false> | CertificationsSelect<true>;
     shifts: ShiftsSelect<false> | ShiftsSelect<true>;
     'job-roles': JobRolesSelect<false> | JobRolesSelect<true>;
+    'calendar-events': CalendarEventsSelect<false> | CalendarEventsSelect<true>;
     timeLogs: TimeLogsSelect<false> | TimeLogsSelect<true>;
     schedulingRuns: SchedulingRunsSelect<false> | SchedulingRunsSelect<true>;
     unavailabilities: UnavailabilitiesSelect<false> | UnavailabilitiesSelect<true>;
@@ -213,6 +215,10 @@ export interface JobRole {
    * Hex color code for UI display (e.g., #28CB8B)
    */
   colorCode?: string | null;
+  /**
+   * Default days of the week this role is scheduled to work
+   */
+  workDays?: ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -339,6 +345,24 @@ export interface Shift {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "calendar-events".
+ */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  type: 'holiday' | 'break' | 'custom';
+  tenantId: string | Tenant;
+  startDate: string;
+  endDate: string;
+  /**
+   * Staff assigned to work on this event (e.g. essential workers on a holiday).
+   */
+  assignedStaff?: (string | User)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "timeLogs".
  */
 export interface TimeLog {
@@ -387,8 +411,18 @@ export interface Unavailability {
   id: string;
   workerId: string | User;
   tenantId: string | Tenant;
-  startTime: string;
-  endTime: string;
+  type: 'temporary' | 'permanent';
+  startTime?: string | null;
+  endTime?: string | null;
+  daysOfWeek?: ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[] | null;
+  /**
+   * Time of day (e.g., 09:00) or leave blank for whole day
+   */
+  permanentStartTime?: string | null;
+  /**
+   * Time of day (e.g., 17:00) or leave blank for whole day
+   */
+  permanentEndTime?: string | null;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   updatedAt: string;
@@ -474,6 +508,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'job-roles';
         value: string | JobRole;
+      } | null)
+    | ({
+        relationTo: 'calendar-events';
+        value: string | CalendarEvent;
       } | null)
     | ({
         relationTo: 'timeLogs';
@@ -688,6 +726,21 @@ export interface JobRolesSelect<T extends boolean = true> {
   defaultStartTime?: T;
   defaultEndTime?: T;
   colorCode?: T;
+  workDays?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "calendar-events_select".
+ */
+export interface CalendarEventsSelect<T extends boolean = true> {
+  title?: T;
+  type?: T;
+  tenantId?: T;
+  startDate?: T;
+  endDate?: T;
+  assignedStaff?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -734,8 +787,12 @@ export interface SchedulingRunsSelect<T extends boolean = true> {
 export interface UnavailabilitiesSelect<T extends boolean = true> {
   workerId?: T;
   tenantId?: T;
+  type?: T;
   startTime?: T;
   endTime?: T;
+  daysOfWeek?: T;
+  permanentStartTime?: T;
+  permanentEndTime?: T;
   reason?: T;
   status?: T;
   updatedAt?: T;

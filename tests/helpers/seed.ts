@@ -179,43 +179,6 @@ export const seedDatabase = async (payload: Payload) => {
     }
     payload.logger.info(`  ✔ ${workers.length} workers`)
 
-    // ── 6. Shifts (1 per department per day, 7 days) ──────────
-    const shiftSlots = [
-      { startH: 6, endH: 14 },   // Morning
-      { startH: 14, endH: 22 },  // Afternoon
-      { startH: 22, endH: 6 },   // Night (crosses midnight)
-    ]
-
-    let shiftCount = 0
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      for (const dept of departments) {
-        const slot = shiftSlots[dayOffset % shiftSlots.length]
-        const endDayOffset = slot.endH < slot.startH ? dayOffset + 1 : dayOffset
-        const certForShift = pickRandom(certs, 1)[0]
-
-        await payload.create({
-          collection: 'shifts',
-          data: {
-            department: dept.id,
-            tenantId: tenant.id,
-            startTime: todayAt(slot.startH, dayOffset),
-            endTime: todayAt(slot.endH, endDayOffset),
-            status: dayOffset < 2 ? 'published' : 'draft',
-            staffingRequirements: [
-              {
-                blockType: 'RoleRequirement',
-                role: 'staff',
-                count: randInt(2, 4),
-                mustHaveCerts: certForShift ? [certForShift.id] : [],
-              },
-            ],
-          },
-        })
-        shiftCount++
-      }
-    }
-    payload.logger.info(`  ✔ ${shiftCount} shifts (7 days × ${departments.length} departments)`)
-
     results[template.slug] = { tenant, admin, certs, departments, workers }
   }
 
@@ -226,7 +189,6 @@ export const seedDatabase = async (payload: Payload) => {
   payload.logger.info(`  Admins      : 1 per tenant   (${TENANTS.length} total)`)
   payload.logger.info(`  Certs       : 5 per tenant, randomly assigned`)
   payload.logger.info(`  Departments : 3 per tenant`)
-  payload.logger.info(`  Shifts      : 21 per tenant  (${21 * TENANTS.length} total)`)
   payload.logger.info('═══════════════════════════════════════════\n')
 
   return results

@@ -44,5 +44,22 @@ export const JobRoles: CollectionConfig = {
         description: 'Hex color code for UI display (e.g., #28CB8B)',
       },
     },
+    {
+      name: 'workDays',
+      type: 'select',
+      hasMany: true,
+      options: [
+        { label: 'Monday', value: 'monday' },
+        { label: 'Tuesday', value: 'tuesday' },
+        { label: 'Wednesday', value: 'wednesday' },
+        { label: 'Thursday', value: 'thursday' },
+        { label: 'Friday', value: 'friday' },
+        { label: 'Saturday', value: 'saturday' },
+        { label: 'Sunday', value: 'sunday' },
+      ],
+      admin: {
+        description: 'Default days of the week this role is scheduled to work',
+      },
+    },
   ],
 }

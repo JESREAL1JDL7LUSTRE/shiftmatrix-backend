@@ -93,7 +93,7 @@ export const solverWebhookEndpoint: Endpoint = {
                     department: departmentId,
                     startTime: new Date(startMs).toISOString(),
                     endTime: new Date(endMs).toISOString(),
-                    status: newStaff.length > 0 ? 'filled' : 'urgent',
+                    status: 'draft',
                     assignedStaff: newStaff as any,
                     staffingRequirements: [
                       {

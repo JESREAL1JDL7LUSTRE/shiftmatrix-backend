@@ -240,6 +240,15 @@ export interface Tenant {
         enableSMSNotifications?: boolean | null;
         enableAuditReports?: boolean | null;
         maxWeeklyHours?: number | null;
+        /**
+         * Global lunch start time (24h format)
+         */
+        lunchStartTime?: string | null;
+        /**
+         * Global lunch end time (24h format)
+         */
+        lunchEndTime?: string | null;
+        defaultWorkDays?: ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[] | null;
         id?: string | null;
         blockName?: string | null;
         blockType: 'FeatureToggles';
@@ -636,6 +645,9 @@ export interface TenantsSelect<T extends boolean = true> {
               enableSMSNotifications?: T;
               enableAuditReports?: T;
               maxWeeklyHours?: T;
+              lunchStartTime?: T;
+              lunchEndTime?: T;
+              defaultWorkDays?: T;
               id?: T;
               blockName?: T;
             };

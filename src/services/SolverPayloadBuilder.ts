@@ -153,11 +153,41 @@ export function buildWorkerPayload(
  * Serializes a shift document into one or more slot payloads
  * (one per staffing requirement × count).
  */
-export function buildSlotsForShift(shift: any): SolverSlotPayload[] {
+export function buildSlotsForShift(
+  shift: any,
+  tenantSettings: any = {},
+  timezoneOffset: number = 0
+): SolverSlotPayload[] {
   const slots: SolverSlotPayload[] = []
   const startMs = new Date(shift.startTime).getTime()
   const endMs = new Date(shift.endTime).getTime()
-  const durationHours = (endMs - startMs) / 3_600_000
+  let durationHours = (endMs - startMs) / 3_600_000
+
+  // Lunch deduction
+  const lunchStartStr = tenantSettings.lunchStartTime || '12:00'
+  const lunchEndStr = tenantSettings.lunchEndTime || '13:00'
+  if (lunchStartStr && lunchEndStr) {
+    const [lStartH, lStartM] = lunchStartStr.split(':').map(Number)
+    const [lEndH, lEndM] = lunchEndStr.split(':').map(Number)
+    
+    // Get local date string for the shift
+    const localD = new Date(startMs - (timezoneOffset * 60 * 1000))
+    const dateStr = localD.toISOString().split('T')[0]
+    
+    const lunchStart = new Date(`${dateStr}T00:00:00.000Z`)
+    lunchStart.setUTCHours(lStartH, lStartM + timezoneOffset, 0, 0)
+    
+    const lunchEnd = new Date(`${dateStr}T00:00:00.000Z`)
+    lunchEnd.setUTCHours(lEndH, lEndM + timezoneOffset, 0, 0)
+    
+    const overlapStart = Math.max(startMs, lunchStart.getTime())
+    const overlapEnd = Math.min(endMs, lunchEnd.getTime())
+    
+    if (overlapEnd > overlapStart) {
+      const deduction = (overlapEnd - overlapStart) / 3_600_000
+      durationHours = Math.max(0, durationHours - deduction)
+    }
+  }
 
   const shiftBaseCerts = (
     (shift.department as any)?.requiredBaseCertifications || []
@@ -214,7 +244,8 @@ export function buildGeneratedSlotsForWorker(
   departmentId: string,
   timezoneOffset: number = 0,
   calendarEvents: any[] = [],
-  existingShifts: any[] = []
+  existingShifts: any[] = [],
+  tenantSettings: any = {}
 ): SolverSlotPayload[] {
   if (!worker.jobRole || !worker.jobRole.defaultStartTime || !worker.jobRole.defaultEndTime) {
     return []
@@ -275,8 +306,6 @@ export function buildGeneratedSlotsForWorker(
   const slotEnd = new Date(`${dateStr}T00:00:00.000Z`)
 
   // Add the local time components, then add timezone offset (in minutes) 
-  // timezoneOffset returns UTC - Local in minutes. Example: +08:00 is -480.
-  // So UTC Time = Local Time + Offset
   slotStart.setUTCHours(startH, startM + timezoneOffset, 0, 0)
   slotEnd.setUTCHours(endH, endM + timezoneOffset, 0, 0)
   
@@ -287,7 +316,30 @@ export function buildGeneratedSlotsForWorker(
     slotEnd.setTime(slotEnd.getTime() + 24 * 60 * 60 * 1000)
   }
   
-  const durationHours = durMs / 3_600_000
+  let durationHours = durMs / 3_600_000
+
+  // Lunch deduction
+  const lunchStartStr = tenantSettings.lunchStartTime || '12:00'
+  const lunchEndStr = tenantSettings.lunchEndTime || '13:00'
+  if (lunchStartStr && lunchEndStr) {
+    const [lStartH, lStartM] = lunchStartStr.split(':').map(Number)
+    const [lEndH, lEndM] = lunchEndStr.split(':').map(Number)
+    
+    const lunchStart = new Date(`${dateStr}T00:00:00.000Z`)
+    lunchStart.setUTCHours(lStartH, lStartM + timezoneOffset, 0, 0)
+    
+    const lunchEnd = new Date(`${dateStr}T00:00:00.000Z`)
+    lunchEnd.setUTCHours(lEndH, lEndM + timezoneOffset, 0, 0)
+    
+    const overlapStart = Math.max(slotStart.getTime(), lunchStart.getTime())
+    const overlapEnd = Math.min(slotEnd.getTime(), lunchEnd.getTime())
+    
+    if (overlapEnd > overlapStart) {
+      const deduction = (overlapEnd - overlapStart) / 3_600_000
+      durationHours = Math.max(0, durationHours - deduction)
+    }
+  }
+
   const jobRoleId = typeof worker.jobRole === 'object' ? worker.jobRole.id : worker.jobRole
 
   return [{

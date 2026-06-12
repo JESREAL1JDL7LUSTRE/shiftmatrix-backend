@@ -93,7 +93,20 @@ export async function enqueueSchedulingJob(
   const tenantSettings = (tenantDoc as any).TenantSettings?.[0] ?? {}
   const defaultMaxHours: number = tenantSettings.maxWeeklyHours ?? 40
 
-  // 5. Fetch all existing shifts in the window (for current hours and to avoid duplicates)
+  // 5. Delete all existing 'draft' shifts in the window to regenerate cleanly
+  await payload.delete({
+    collection: 'shifts',
+    where: {
+      tenantId: { equals: tenantId },
+      status: { equals: 'draft' },
+      and: [
+        { startTime: { greater_than_equal: startDate } },
+        { startTime: { less_than_equal: endDate } },
+      ],
+    }
+  })
+
+  // 6. Fetch remaining existing shifts (published, filled, etc.) in the window
   const existingShiftsRes = await payload.find({
     collection: 'shifts',
     where: {
@@ -123,7 +136,7 @@ export async function enqueueSchedulingJob(
 
   // First, add all existing shifts as slots
   for (const shift of existingShiftsRes.docs) {
-    const shiftSlots = buildSlotsForShift(shift)
+    const shiftSlots = buildSlotsForShift(shift, tenantSettings, timezoneOffset)
     slots.push(...shiftSlots)
   }
 
@@ -144,7 +157,8 @@ export async function enqueueSchedulingJob(
         deptId, 
         timezoneOffset,
         calendarEvents,
-        existingShiftsRes.docs
+        existingShiftsRes.docs,
+        tenantSettings
       )
       slots.push(...generatedSlots)
     }

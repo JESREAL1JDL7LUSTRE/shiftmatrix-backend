@@ -5,6 +5,7 @@
  * math to AttendanceService. No business logic lives here.
  */
 import type { Endpoint } from 'payload'
+import { z } from 'zod'
 import { processClockIn } from '../services/TimeLogApplicationService'
 
 export const clockInEndpoint: Endpoint = {
@@ -18,14 +19,23 @@ export const clockInEndpoint: Endpoint = {
       body = req.body || {}
     }
 
-    const { shiftId, lat, lng, eventType, qrToken } = body
+    const clockInSchema = z.object({
+      shiftId: z.string().min(1, 'shiftId is required'),
+      lat: z.number(),
+      lng: z.number(),
+      eventType: z.enum(['clock_in', 'clock_out', 'break_start', 'break_end', 'correction']),
+      qrToken: z.string().min(1, 'qrToken is required')
+    })
 
-    if (!shiftId || lat === undefined || lng === undefined || !eventType || !qrToken) {
+    const parsed = clockInSchema.safeParse(body)
+    if (!parsed.success) {
       return Response.json(
-        { error: 'shiftId, lat, lng, eventType, and qrToken are required' },
+        { error: 'Validation failed', details: parsed.error.issues },
         { status: 400 }
       )
     }
+
+    const { shiftId, lat, lng, eventType, qrToken } = parsed.data
 
     if (!req.user || req.user.role !== 'worker') {
       return Response.json({ error: 'Unauthorized. Only workers can clock in.' }, { status: 401 })

@@ -1,4 +1,5 @@
 import json
+import time
 from ortools.sat.python import cp_model
 from datetime import datetime, timedelta
 
@@ -111,7 +112,11 @@ def solve_schedule(job_data: dict) -> dict:
     
     solver = cp_model.CpSolver()
     # solver.parameters.max_time_in_seconds = 10.0
+    
+    start_time = time.time()
     status = solver.Solve(model)
+    solve_duration = time.time() - start_time
+    print(f"[Solver] cp_model.Solve took {solve_duration:.3f} seconds. Status: {solver.StatusName(status)}")
     
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         assignments = []
@@ -126,7 +131,10 @@ def solve_schedule(job_data: dict) -> dict:
         return {
             'success': True,
             'status': solver.StatusName(status),
-            'assignments': assignments
+            'assignments': assignments,
+            'metrics': {
+                'solve_duration_sec': solve_duration
+            }
         }
     else:
         return {

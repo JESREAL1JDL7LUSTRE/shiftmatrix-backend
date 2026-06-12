@@ -26,10 +26,14 @@ while True:
             job_id = job.get('jobId')
             
             print(f"[*] Received job: {job_id}")
+            start_time = time.time()
             
             # Solve
             solution = solve_schedule(job)
             solution['jobId'] = job_id
+            
+            total_duration = time.time() - start_time
+            print(f"[*] Job {job_id} solved in {total_duration:.3f} seconds.")
             
             # Webhook
             print(f"[*] Sending webhook for job: {job_id}")

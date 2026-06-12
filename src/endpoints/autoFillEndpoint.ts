@@ -5,6 +5,7 @@
  * to SchedulingService. No business logic lives here.
  */
 import type { Endpoint } from 'payload'
+import { z } from 'zod'
 import { enqueueSchedulingJob } from '../services/SchedulingService'
 
 export const autoFillEndpoint: Endpoint = {
@@ -18,10 +19,18 @@ export const autoFillEndpoint: Endpoint = {
       body = req.body || {}
     }
 
-    const { startDate, endDate, timezoneOffset = 0 } = body
-    if (!startDate || !endDate) {
-      return Response.json({ error: 'startDate and endDate required' }, { status: 400 })
+    const autoFillSchema = z.object({
+      startDate: z.string().datetime({ message: 'Invalid start date format' }),
+      endDate: z.string().datetime({ message: 'Invalid end date format' }),
+      timezoneOffset: z.number().optional().default(0)
+    })
+
+    const parsed = autoFillSchema.safeParse(body)
+    if (!parsed.success) {
+      return Response.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 })
     }
+
+    const { startDate, endDate, timezoneOffset } = parsed.data
 
     if (!req.user?.tenantId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })

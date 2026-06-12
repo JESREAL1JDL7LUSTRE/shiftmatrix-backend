@@ -1,5 +1,6 @@
 import { PayloadHandler, Endpoint } from 'payload'
 import crypto from 'crypto'
+import { emitNotification } from '../infrastructure/NotificationBus'
 
 export const solverWebhookEndpoint: Endpoint = {
   path: '/solver-webhook',
@@ -48,6 +49,21 @@ export const solverWebhookEndpoint: Endpoint = {
             errorReason: reason
           }
         })
+        
+        const tId = typeof runs.docs[0].tenantId === 'object' ? runs.docs[0].tenantId.id : runs.docs[0].tenantId;
+        const admins = await req.payload.find({
+          collection: 'users',
+          where: { tenantId: { equals: tId }, role: { equals: 'admin' } },
+          limit: 100
+        });
+        
+        for (const admin of admins.docs) {
+          emitNotification({
+            recipientId: admin.id,
+            title: 'Auto-Fill Failed',
+            message: `Solver failed: ${reason}`
+          });
+        }
       }
 
       return Response.json({ received: true })
@@ -130,6 +146,24 @@ export const solverWebhookEndpoint: Endpoint = {
               id: runs.docs[0].id,
               data: { status: 'completed' }
             })
+          }
+
+          // Notify admins of success so UI can real-time refresh
+          if (tenantId) {
+            const tId = typeof tenantId === 'object' ? tenantId.id : tenantId;
+            const admins = await req.payload.find({
+              collection: 'users',
+              where: { tenantId: { equals: tId }, role: { equals: 'admin' } },
+              limit: 100
+            });
+            
+            for (const admin of admins.docs) {
+              emitNotification({
+                recipientId: admin.id,
+                title: 'Schedule Generated',
+                message: 'Auto-Fill computation finished successfully. Your view has been refreshed.'
+              });
+            }
           }
         } catch (err) {
           console.error(`[Solver Webhook Async Error] ${err}`)

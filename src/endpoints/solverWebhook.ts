@@ -1,6 +1,6 @@
-import { PayloadHandler, Endpoint } from 'payload'
+import { Endpoint } from 'payload'
 import crypto from 'crypto'
-import { emitNotification } from '../infrastructure/NotificationBus'
+import { applySolverAssignments, handleSolverFailure } from '../services/ScheduleResultService'
 
 export const solverWebhookEndpoint: Endpoint = {
   path: '/solver-webhook',
@@ -14,7 +14,9 @@ export const solverWebhookEndpoint: Endpoint = {
     
     if (secret && signature) {
       const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
-      if (signature !== expectedSignature) {
+      
+      // Use timingSafeEqual to prevent timing attacks
+      if (signature.length !== expectedSignature.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
         return Response.json({ error: 'Unauthorized payload' }, { status: 401 })
       }
     } else if (secret && !signature) {
@@ -32,40 +34,7 @@ export const solverWebhookEndpoint: Endpoint = {
 
     if (!success) {
       console.log(`[Solver Webhook] Job ${jobId} failed to solve: ${reason}`)
-      
-      // Update SchedulingRuns to failed
-      const runs = await req.payload.find({
-        collection: 'schedulingRuns',
-        where: { jobId: { equals: jobId } },
-        limit: 1
-      })
-
-      if (runs.docs.length > 0) {
-        await req.payload.update({
-          collection: 'schedulingRuns',
-          id: runs.docs[0].id,
-          data: {
-            status: 'failed',
-            errorReason: reason
-          }
-        })
-        
-        const tId = typeof runs.docs[0].tenantId === 'object' ? runs.docs[0].tenantId.id : runs.docs[0].tenantId;
-        const admins = await req.payload.find({
-          collection: 'users',
-          where: { tenantId: { equals: tId }, role: { equals: 'admin' } },
-          limit: 100
-        });
-        
-        for (const admin of admins.docs) {
-          emitNotification({
-            recipientId: admin.id,
-            title: 'Auto-Fill Failed',
-            message: `Solver failed: ${reason}`
-          });
-        }
-      }
-
+      await handleSolverFailure(req.payload, jobId, reason)
       return Response.json({ received: true })
     }
 
@@ -73,102 +42,7 @@ export const solverWebhookEndpoint: Endpoint = {
 
     if (assignments && assignments.length > 0) {
       // Execute asynchronously to prevent python worker timeouts
-      (async () => {
-        try {
-          // Group assignments by shiftId
-          const shiftMap: Record<string, string[]> = {}
-          for (const a of assignments) {
-            if (!shiftMap[a.shiftId]) shiftMap[a.shiftId] = []
-            shiftMap[a.shiftId].push(a.workerId)
-          }
-
-          // Fetch SchedulingRuns first to access tenantId
-          const runs = await req.payload.find({
-            collection: 'schedulingRuns',
-            where: { jobId: { equals: jobId } },
-            limit: 1
-          })
-          const tenantId = runs.docs.length > 0 ? runs.docs[0].tenantId : null
-
-          const updates = []
-          for (const [shiftId, workerIds] of Object.entries(shiftMap)) {
-            const newStaff = [...new Set([...workerIds])]
-
-            if (shiftId.startsWith('NEW__')) {
-              const parts = shiftId.split('__')
-              const startMs = parseInt(parts[2])
-              const endMs = parseInt(parts[3])
-              const jobRoleId = parts[4]
-              const departmentId = parts[5] || ''
-
-              if (tenantId) {
-                updates.push(req.payload.create({
-                  collection: 'shifts',
-                  data: {
-                    tenantId: typeof tenantId === 'object' ? tenantId.id : tenantId,
-                    department: departmentId,
-                    startTime: new Date(startMs).toISOString(),
-                    endTime: new Date(endMs).toISOString(),
-                    status: 'draft',
-                    assignedStaff: newStaff as any,
-                    staffingRequirements: [
-                      {
-                        blockType: 'RoleRequirement',
-                        role: jobRoleId,
-                        count: 1,
-                      }
-                    ]
-                  }
-                }))
-              }
-            } else {
-              const currentShift = await req.payload.findByID({ collection: 'shifts', id: shiftId })
-              const shiftReqCount = (currentShift.staffingRequirements || []).reduce((acc: number, req: any) => acc + (req.count || 1), 0)
-              const isFilled = newStaff.length >= shiftReqCount
-
-              updates.push(req.payload.update({
-                collection: 'shifts',
-                id: shiftId,
-                data: {
-                  assignedStaff: newStaff as any,
-                  status: isFilled ? 'filled' : 'published'
-                }
-              }))
-            }
-          }
-
-          await Promise.all(updates)
-
-          // Update SchedulingRuns to completed
-          if (runs.docs.length > 0) {
-            await req.payload.update({
-              collection: 'schedulingRuns',
-              id: runs.docs[0].id,
-              data: { status: 'completed' }
-            })
-          }
-
-          // Notify admins of success so UI can real-time refresh
-          if (tenantId) {
-            const tId = typeof tenantId === 'object' ? tenantId.id : tenantId;
-            const admins = await req.payload.find({
-              collection: 'users',
-              where: { tenantId: { equals: tId }, role: { equals: 'admin' } },
-              limit: 100
-            });
-            
-            for (const admin of admins.docs) {
-              emitNotification({
-                recipientId: admin.id,
-                title: 'Schedule Generated',
-                message: 'Auto-Fill computation finished successfully. Your view has been refreshed.'
-              });
-            }
-          }
-        } catch (err) {
-          console.error(`[Solver Webhook Async Error] ${err}`)
-        }
-      })();
+      applySolverAssignments(req.payload, jobId, assignments)
     }
 
     return Response.json({ message: 'Schedule processing started asynchronously' })

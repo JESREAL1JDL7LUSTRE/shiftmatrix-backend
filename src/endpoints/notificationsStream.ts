@@ -6,6 +6,7 @@
  */
 import type { Endpoint } from 'payload'
 import { notificationBus } from '../infrastructure/NotificationBus'
+import jwt from 'jsonwebtoken'
 
 export const notificationsStreamEndpoint: Endpoint = {
   path: '/stream-notifications',
@@ -16,18 +17,17 @@ export const notificationsStreamEndpoint: Endpoint = {
     // If no user in req (e.g. EventSource cannot send Authorization header cross-origin),
     // check the query string for the token.
     if (!user) {
-      const url = new URL(req.url)
+      const url = new URL(req.url || '')
       const token = url.searchParams.get('token')
       
       if (token) {
         try {
-          const jwt = require('jsonwebtoken')
-          const decoded = jwt.verify(token, req.payload.secret)
+          const decoded = jwt.verify(token, req.payload.secret) as any
           if (decoded && decoded.id) {
             user = { id: decoded.id } as any
           }
         } catch (err) {
-          // invalid token
+          console.warn('[NotificationsStream] Invalid token provided via query string')
         }
       }
     }
